@@ -1,0 +1,15 @@
+.git
+.idea
+.vscode
+.env
+vendor
+runtime
+backend/runtime
+backend/web/assets
+frontend/runtime
+frontend/web/assets
+console/runtime
+docker/mysql_data
+docker/pg_data
+tests/_output
+tests/Support/output

@@ -1,0 +1,108 @@
+body {
+    color: #1d2433;
+    background: #f6f8fb;
+}
+
+.site-header {
+    background: #fff;
+}
+
+.brand {
+    color: #172033;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.nav-links {
+    display: flex;
+    gap: 18px;
+}
+
+.nav-links a {
+    color: #41506a;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.front-hero {
+    padding: 80px 0;
+}
+
+.front-hero .container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 48px;
+    align-items: center;
+}
+
+.eyebrow {
+    color: #2f6fdd;
+    font-weight: 700;
+    letter-spacing: 0;
+    margin-bottom: 12px;
+}
+
+.front-hero h1 {
+    font-size: 48px;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 20px;
+}
+
+.lead {
+    color: #536176;
+    font-size: 18px;
+    max-width: 620px;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 28px;
+}
+
+.front-status {
+    background: #fff;
+    border: 1px solid #dce3ee;
+    border-radius: 8px;
+    box-shadow: 0 14px 40px rgba(30, 48, 80, 0.08);
+    padding: 24px;
+}
+
+.front-status div {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 14px 0;
+}
+
+.front-status div + div {
+    border-top: 1px solid #e7ecf3;
+}
+
+.front-status span {
+    color: #6a768a;
+}
+
+.front-status strong {
+    color: #172033;
+}
+
+@media (max-width: 760px) {
+    .front-hero {
+        padding: 48px 0;
+    }
+
+    .front-hero .container {
+        grid-template-columns: 1fr;
+    }
+
+    .front-hero h1 {
+        font-size: 34px;
+    }
+
+    .nav-links {
+        gap: 12px;
+    }
+}
