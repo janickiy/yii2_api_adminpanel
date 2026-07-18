@@ -15,7 +15,7 @@ settings:
 modules:
   config:
     Yii2:
-      configFile: tests/config/backend.php
+      configFile: tests/config/frontend.php
 extensions:
   enabled:
     - Codeception\Extension\RunFailed
@@ -23,6 +23,9 @@ coverage:
   enabled: true
   include:
     - /backend/*
+    - /application/*
     - /common/*
     - /console/*
+    - /domain/*
     - /frontend/*
+    - /infrastructure/*

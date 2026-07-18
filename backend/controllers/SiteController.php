@@ -4,13 +4,37 @@ declare(strict_types=1);
 
 namespace backend\controllers;
 
+use common\filters\PublicRateLimitFilter;
 use common\models\forms\AdminLoginForm;
 use Yii;
+use yii\base\UserException;
+use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\Response;
 
 class SiteController extends Controller
 {
+    public function behaviors(): array
+    {
+        return [
+            'verbs' => [
+                'class' => VerbFilter::class,
+                'actions' => [
+                    'home' => ['GET'],
+                    'login' => ['GET', 'POST'],
+                    'logout' => ['POST'],
+                ],
+            ],
+            'publicRateLimit' => [
+                'class' => PublicRateLimitFilter::class,
+                'only' => ['login'],
+                'limit' => 10,
+                'window' => 60,
+                'scope' => 'admin-auth',
+            ],
+        ];
+    }
+
     public function actionHome(): Response
     {
         return $this->redirect(['/dashboard/index']);
@@ -28,6 +52,11 @@ class SiteController extends Controller
             $model->load(Yii::$app->request->post(), '');
 
             if ($model->login()) {
+                Yii::info([
+                    'event' => 'admin.login',
+                    'admin_id' => (int) Yii::$app->user->id,
+                ], 'application.admin');
+
                 return $this->redirect(['/dashboard/index']);
             }
 
@@ -43,7 +72,9 @@ class SiteController extends Controller
 
     public function actionLogout(): Response
     {
+        $adminId = (int) Yii::$app->user->id;
         Yii::$app->user->logout();
+        Yii::info(['event' => 'admin.logout', 'admin_id' => $adminId], 'application.admin');
 
         return $this->redirect(['/site/login']);
     }
@@ -51,12 +82,15 @@ class SiteController extends Controller
     public function actionError(): array|string
     {
         $exception = Yii::$app->errorHandler->exception;
+        $safeMessage = $exception instanceof UserException || YII_DEBUG
+            ? ($exception?->getMessage() ?? 'Ошибка')
+            : 'Произошла внутренняя ошибка.';
 
         if (Yii::$app->request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
 
             return [
-                'message' => $exception?->getMessage() ?? 'Error',
+                'message' => $safeMessage,
             ];
         }
 
@@ -66,7 +100,7 @@ class SiteController extends Controller
 
         return $this->render('error', [
             'name' => $name,
-            'message' => $exception?->getMessage() ?? 'Error',
+            'message' => $safeMessage,
             'exception' => $exception,
         ]);
     }

@@ -2,52 +2,54 @@
 
 declare(strict_types=1);
 
-namespace app\tests\Unit;
+namespace tests\Unit;
 
-use backend\controllers\SiteController;
-use backend\widgets\Alert;
-use Codeception\Test\Unit;
-use common\models\Admin;
-use common\models\User;
-use console\controllers\HelloController;
-use frontend\controllers\SiteController as FrontendSiteController;
-use frontend\modules\api\controllers\AuthController;
-use frontend\modules\api\Module as ApiModule;
-use Yii;
-use yii\helpers\Url;
+use PHPUnit\Framework\TestCase;
 
-final class AdvancedStructureTest extends Unit
+final class AdvancedStructureTest extends TestCase
 {
-    public function testApplicationAliasesPointToAdvancedDirectories(): void
+    private string $root;
+
+    protected function setUp(): void
     {
-        self::assertSame(dirname(__DIR__, 2) . '/backend', Yii::getAlias('@backend'));
-        self::assertSame(dirname(__DIR__, 2) . '/frontend', Yii::getAlias('@frontend'));
-        self::assertSame(dirname(__DIR__, 2) . '/frontend/modules/api', Yii::getAlias('@api'));
-        self::assertSame(dirname(__DIR__, 2) . '/common', Yii::getAlias('@common'));
-        self::assertSame(dirname(__DIR__, 2) . '/console', Yii::getAlias('@console'));
+        $this->root = dirname(__DIR__, 2);
     }
 
-    public function testMovedClassesAreAutoloadable(): void
+    public function testLayeredDirectoriesAndAliasesExist(): void
     {
-        self::assertTrue(class_exists(Admin::class));
-        self::assertTrue(class_exists(User::class));
-        self::assertTrue(class_exists(SiteController::class));
-        self::assertTrue(class_exists(FrontendSiteController::class));
-        self::assertTrue(class_exists(AuthController::class));
-        self::assertTrue(class_exists(ApiModule::class));
-        self::assertTrue(class_exists(HelloController::class));
-        self::assertTrue(class_exists(Alert::class));
+        self::assertDirectoryExists($this->root . '/application');
+        self::assertDirectoryExists($this->root . '/domain');
+        self::assertDirectoryExists($this->root . '/infrastructure');
+        self::assertSame($this->root . '/application', \Yii::getAlias('@application'));
+        self::assertSame($this->root . '/domain', \Yii::getAlias('@domain'));
+        self::assertSame($this->root . '/infrastructure', \Yii::getAlias('@infrastructure'));
     }
 
-    public function testBackendRoutesAreScopedUnderCp(): void
+    public function testDockerUsesPhp84AndPostgreSqlOnly(): void
     {
-        self::assertSame('/cp', Url::to(['/dashboard/index']));
-        self::assertSame('/cp/admin', Url::to(['/admin/index']));
-        self::assertSame('/cp/admin/create', Url::to(['/admin/create']));
-        self::assertSame('/cp/admin/edit/1', Url::to(['/admin/edit', 'id' => 1]));
-        self::assertSame('/cp/catalog', Url::to(['/catalog/index']));
-        self::assertSame('/cp/notes', Url::to(['/notes/index']));
-        self::assertSame('/cp/datatable/notes', Url::to(['/datatable/notes']));
-        self::assertSame('/login', Url::to(['/site/login']));
+        $dockerfile = (string) file_get_contents($this->root . '/docker/php/Dockerfile');
+        $compose = (string) file_get_contents($this->root . '/docker-compose.yml');
+
+        self::assertStringContainsString('FROM php:8.4-fpm-alpine', $dockerfile);
+        self::assertStringContainsString('pdo_pgsql', $dockerfile);
+        self::assertStringContainsString('postgres:', $compose);
+        self::assertStringContainsString('redis:', $compose);
+        self::assertStringContainsString('memcached:', $compose);
+        self::assertStringNotContainsString('mysql:', $compose);
+    }
+
+    public function testTrackedOpenApiContractContainsCanonicalResources(): void
+    {
+        $spec = (string) file_get_contents(
+            $this->root . '/frontend/modules/api/openapi/openapi.yaml',
+        );
+
+        self::assertStringContainsString('/api/v1/register:', $spec);
+        self::assertStringContainsString('/api/v1/login:', $spec);
+        self::assertStringContainsString('/api/v1/logout:', $spec);
+        self::assertStringContainsString('/api/v1/categories:', $spec);
+        self::assertStringContainsString('/api/v1/notes:', $spec);
+        self::assertStringContainsString('/api/v1/notes/{id}:', $spec);
+        self::assertStringContainsString('bearerAuth:', $spec);
     }
 }

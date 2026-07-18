@@ -14,65 +14,79 @@ $this->registerMetaTag(['name' => 'viewport', 'content' => 'width=device-width, 
 ?>
 <?php $this->beginPage() ?>
 <!DOCTYPE html>
-<html lang="<?= Yii::$app->language ?>">
+<html lang="<?= Html::encode(Yii::$app->language) ?>">
 <head>
     <?php $this->head() ?>
-    <title>Авторизация</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
-    <link rel="stylesheet" href="/plugins/fontawesome-free/css/all.min.css">
-    <link rel="stylesheet" href="/plugins/icheck-bootstrap/icheck-bootstrap.min.css">
-    <link rel="stylesheet" href="/dist/css/adminlte.min.css">
+    <title>Вход · <?= Html::encode(Yii::$app->name) ?></title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0/dist/css/adminlte.min.css">
+    <link rel="stylesheet" href="/admin-assets/site.css">
 </head>
-<body class="hold-transition login-page">
+<body class="login-page bg-body-secondary">
 <?php $this->beginBody() ?>
 <div class="login-box">
-    <div class="card card-outline card-primary">
-        <div class="card-header text-center">
-            <b>Admin</b>LTE
+    <div class="card card-outline card-primary shadow">
+        <div class="card-header text-center py-4">
+            <a href="<?= Url::to(['/site/login']) ?>" class="h2 text-decoration-none">
+                <strong>Notes</strong> Admin
+            </a>
         </div>
-        <div class="card-body">
-            <p class="login-box-msg">Sign in to start your session</p>
+        <div class="card-body login-card-body">
+            <p class="login-box-msg">Войдите в панель управления</p>
+
             <?php if (Yii::$app->session->hasFlash('error')): ?>
-                <div class="alert alert-danger"><?= Html::encode((string) Yii::$app->session->getFlash('error')) ?></div>
+                <div class="alert alert-danger" role="alert">
+                    <?= Html::encode((string) Yii::$app->session->getFlash('error')) ?>
+                </div>
             <?php endif ?>
+
             <form action="<?= Url::to(['/site/login']) ?>" method="post">
                 <?= Html::hiddenInput(Yii::$app->request->csrfParam, Yii::$app->request->csrfToken) ?>
-                <div class="input-group mb-3">
-                    <input type="text" name="login" value="<?= Html::encode((string) $model->login) ?>" class="form-control" placeholder="Email">
-                    <div class="input-group-append">
-                        <div class="input-group-text"><span class="fas fa-envelope"></span></div>
+
+                <div class="input-group mb-1">
+                    <div class="form-floating">
+                        <input id="login" type="text" name="login" value="<?= Html::encode((string) $model->login) ?>"
+                               class="form-control<?= $model->hasErrors('login') ? ' is-invalid' : '' ?>"
+                               placeholder="Логин" autocomplete="username" required autofocus>
+                        <label for="login">Логин</label>
                     </div>
-                    <?php if ($model->hasErrors('login')): ?>
-                        <p class="text-danger w-100"><?= Html::encode($model->getFirstError('login')) ?></p>
-                    <?php endif ?>
+                    <span class="input-group-text"><i class="bi bi-person" aria-hidden="true"></i></span>
                 </div>
-                <div class="input-group mb-3">
-                    <input type="password" name="password" class="form-control" placeholder="Password">
-                    <div class="input-group-append">
-                        <div class="input-group-text"><span class="fas fa-lock"></span></div>
+                <?php if ($model->hasErrors('login')): ?>
+                    <div class="text-danger small mb-3"><?= Html::encode($model->getFirstError('login')) ?></div>
+                <?php else: ?>
+                    <div class="mb-3"></div>
+                <?php endif ?>
+
+                <div class="input-group mb-1">
+                    <div class="form-floating">
+                        <input id="password" type="password" name="password"
+                               class="form-control<?= $model->hasErrors('password') ? ' is-invalid' : '' ?>"
+                               placeholder="Пароль" autocomplete="current-password" required>
+                        <label for="password">Пароль</label>
                     </div>
-                    <?php if ($model->hasErrors('password')): ?>
-                        <p class="text-danger w-100"><?= Html::encode($model->getFirstError('password')) ?></p>
-                    <?php endif ?>
+                    <span class="input-group-text"><i class="bi bi-lock" aria-hidden="true"></i></span>
                 </div>
-                <div class="row">
-                    <div class="col-8">
-                        <div class="icheck-primary">
-                            <input type="checkbox" id="remember" name="remember" value="1" <?= $model->remember ? 'checked' : '' ?>>
-                            <label for="remember">Remember Me</label>
-                        </div>
+                <?php if ($model->hasErrors('password')): ?>
+                    <div class="text-danger small mb-3"><?= Html::encode($model->getFirstError('password')) ?></div>
+                <?php else: ?>
+                    <div class="mb-3"></div>
+                <?php endif ?>
+
+                <div class="d-flex align-items-center justify-content-between gap-3">
+                    <div class="form-check">
+                        <input id="remember" type="checkbox" name="remember" value="1" class="form-check-input" <?= $model->remember ? 'checked' : '' ?>>
+                        <label for="remember" class="form-check-label">Запомнить меня</label>
                     </div>
-                    <div class="col-4">
-                        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
-                    </div>
+                    <button type="submit" class="btn btn-primary px-4">Войти</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-<script src="/plugins/jquery/jquery.min.js"></script>
-<script src="/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-<script src="/dist/js/adminlte.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0/dist/js/adminlte.min.js"></script>
 <?php $this->endBody() ?>
 </body>
 </html>

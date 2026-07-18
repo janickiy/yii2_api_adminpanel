@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/12.5/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+         failOnWarning="true">
+    <testsuites>
+        <testsuite name="unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="api">
+            <directory>tests/Api</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <env name="YII_ENV" value="test"/>
+        <env name="YII_DEBUG" value="true"/>
+    </php>
+    <source>
+        <include>
+            <directory suffix=".php">application</directory>
+            <directory suffix=".php">domain</directory>
+            <directory suffix=".php">infrastructure</directory>
+            <directory suffix=".php">frontend/modules/api</directory>
+        </include>
+    </source>
+</phpunit>

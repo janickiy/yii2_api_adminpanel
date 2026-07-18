@@ -36,6 +36,35 @@ a.desc:after {
     white-space: nowrap;
 }
 
+.app-sidebar .nav-link p {
+    margin-bottom: 0;
+}
+
+.app-content .card {
+    border: 0;
+    box-shadow: 0 .25rem 1rem rgba(31, 45, 61, .08);
+}
+
+.app-content .table > :not(caption) > * > * {
+    padding: .85rem .75rem;
+    vertical-align: middle;
+}
+
+.table-actions {
+    display: inline-flex;
+    gap: .4rem;
+    white-space: nowrap;
+}
+
+.message-body {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.pagination {
+    margin-bottom: 0;
+}
+
 .hint-block {
     display: block;
     margin-top: 5px;

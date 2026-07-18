@@ -27,3 +27,36 @@ if (!function_exists('env')) {
         };
     }
 }
+
+if (!function_exists('app_secret')) {
+    /**
+     * @param list<string> $knownInsecureValues
+     */
+    function app_secret(
+        string $name,
+        mixed $value,
+        string $developmentDefault,
+        array $knownInsecureValues = [],
+    ): string {
+        $secret = trim((string) $value);
+        $environment = strtolower((string) env('APP_ENV', defined('YII_ENV') ? YII_ENV : 'dev'));
+        $isProduction = $environment === 'prod'
+            || (defined('YII_ENV_PROD') && YII_ENV_PROD);
+
+        if (!$isProduction) {
+            return $secret !== '' ? $secret : $developmentDefault;
+        }
+
+        $insecure = $secret === ''
+            || strlen($secret) < 32
+            || in_array($secret, $knownInsecureValues, true);
+        if ($insecure) {
+            throw new RuntimeException(sprintf(
+                '%s must be set to a unique secret of at least 32 characters in production.',
+                $name,
+            ));
+        }
+
+        return $secret;
+    }
+}

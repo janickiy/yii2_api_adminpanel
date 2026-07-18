@@ -1,21 +1,26 @@
-FROM php:8.3-fpm-alpine
+FROM composer:2 AS composer
+
+FROM php:8.4-fpm-alpine
 
 RUN apk add --no-cache \
-    git unzip icu-dev libzip-dev libpng-dev libxml2-dev oniguruma-dev \
-    libpq-dev libmemcached-dev zlib-dev linux-headers $PHPIZE_DEPS
+        icu-libs libzip libpq libpng libjpeg-turbo freetype libmemcached-libs zstd-libs \
+        postgresql-client \
+    && apk add --no-cache --virtual .build-deps \
+        $PHPIZE_DEPS icu-dev libzip-dev libpq-dev libpng-dev libjpeg-turbo-dev \
+        freetype-dev libmemcached-dev zstd-dev cyrus-sasl-dev linux-headers \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j"$(getconf _NPROCESSORS_ONLN)" \
+        bcmath gd intl opcache pcntl pdo_pgsql zip \
+    && pecl install redis memcached \
+    && docker-php-ext-enable redis memcached \
+    && apk del .build-deps \
+    && rm -rf /tmp/pear
 
-RUN docker-php-ext-install pdo_mysql pdo_pgsql intl zip bcmath gd mbstring
-
-RUN pecl install redis memcached xdebug \
-    && docker-php-ext-enable redis memcached xdebug
-
-RUN EXPECTED_CHECKSUM="$(php -r 'copy("https://composer.github.io/installer.sig", "php://stdout");')" \
-    && php -r 'copy("https://getcomposer.org/installer", "composer-setup.php");' \
-    && ACTUAL_CHECKSUM="$(php -r 'echo hash_file("sha384", "composer-setup.php");')" \
-    && test "$EXPECTED_CHECKSUM" = "$ACTUAL_CHECKSUM" \
-    && php composer-setup.php --install-dir=/usr/local/bin --filename=composer --quiet \
-    && rm composer-setup.php
+COPY --from=composer /usr/bin/composer /usr/local/bin/composer
+COPY docker/php/entrypoint.sh /usr/local/bin/app-entrypoint
+RUN chmod +x /usr/local/bin/app-entrypoint
 
 WORKDIR /var/www/html
 
-CMD ["php-fpm"]
+ENTRYPOINT ["app-entrypoint"]
+CMD ["php-fpm", "-F"]

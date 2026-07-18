@@ -3,6 +3,16 @@
 declare(strict_types=1);
 
 $params = require __DIR__ . '/params.php';
+$cookieValidationKey = app_secret(
+    'BACKEND_COOKIE_VALIDATION_KEY or COOKIE_VALIDATION_KEY',
+    env('BACKEND_COOKIE_VALIDATION_KEY', env('COOKIE_VALIDATION_KEY')),
+    'yii2-api-backend-cookie-key',
+    [
+        'yii2-api-backend-cookie-key',
+        'local-development-cookie-key-change-me',
+        'replace-with-a-long-random-cookie-key',
+    ],
+);
 
 $config = [
     'id' => 'yii2-api-adminpanel-backend',
@@ -12,7 +22,7 @@ $config = [
     'components' => [
         'request' => [
             'csrfParam' => '_csrf-backend',
-            'cookieValidationKey' => env('BACKEND_COOKIE_VALIDATION_KEY', env('COOKIE_VALIDATION_KEY', 'yii2-api-backend-cookie-key')),
+            'cookieValidationKey' => $cookieValidationKey,
             'enableCsrfValidation' => true,
             'parsers' => [
                 'application/json' => \yii\web\JsonParser::class,
@@ -39,6 +49,14 @@ $config = [
                 [
                     'class' => \yii\log\FileTarget::class,
                     'levels' => ['error', 'warning'],
+                    'logVars' => [],
+                ],
+                [
+                    'class' => \yii\log\FileTarget::class,
+                    'levels' => ['info', 'warning', 'error'],
+                    'categories' => ['application*'],
+                    'logFile' => '@backend/runtime/logs/events.log',
+                    'logVars' => [],
                 ],
             ],
         ],
@@ -53,9 +71,15 @@ $config = [
                 'GET /' => 'site/home',
                 'GET login' => 'site/login',
                 'POST login' => 'site/login',
-                'GET logout' => 'site/logout',
                 'POST logout' => 'site/logout',
                 'GET cp' => 'dashboard/index',
+
+                'GET cp/admins' => 'admin/index',
+                'GET cp/admins/create' => 'admin/create',
+                'POST cp/admins' => 'admin/store',
+                'GET cp/admins/<id:\d+>/edit' => 'admin/edit',
+                'PUT,PATCH cp/admins/<id:\d+>' => 'admin/update',
+                'DELETE cp/admins/<id:\d+>' => 'admin/destroy',
 
                 'GET cp/admin' => 'admin/index',
                 'GET cp/admin/create' => 'admin/create',
@@ -65,6 +89,20 @@ $config = [
                 'POST cp/admin/update' => 'admin/update',
                 'DELETE cp/admin/destroy/<id:\d+>' => 'admin/destroy',
 
+                'GET cp/users' => 'users/index',
+                'GET cp/users/create' => 'users/create',
+                'POST cp/users' => 'users/store',
+                'GET cp/users/<id:\d+>/edit' => 'users/edit',
+                'PUT,PATCH cp/users/<id:\d+>' => 'users/update',
+                'POST cp/users/update' => 'users/update',
+                'DELETE cp/users/<id:\d+>' => 'users/destroy',
+
+                'GET cp/categories' => 'catalog/index',
+                'GET cp/categories/create' => 'catalog/create',
+                'POST cp/categories' => 'catalog/store',
+                'GET cp/categories/<id:\d+>/edit' => 'catalog/edit',
+                'PUT,PATCH cp/categories/<id:\d+>' => 'catalog/update',
+                'DELETE cp/categories/<id:\d+>' => 'catalog/destroy',
                 'GET cp/catalog' => 'catalog/index',
                 'GET cp/catalog/create' => 'catalog/create',
                 'POST cp/catalog/store' => 'catalog/store',
@@ -78,6 +116,11 @@ $config = [
                 'PUT cp/notes/update' => 'notes/update',
                 'POST cp/notes/update' => 'notes/update',
                 'DELETE cp/notes/destroy/<id:\d+>' => 'notes/destroy',
+
+                'GET cp/messages' => 'messages/index',
+                'GET cp/messages/<id:\d+>' => 'messages/view',
+                'POST cp/messages/<id:\d+>/status' => 'messages/status',
+                'DELETE cp/messages/<id:\d+>' => 'messages/destroy',
 
                 'GET cp/datatable/notes' => 'datatable/notes',
                 'GET cp/datatable/admin' => 'datatable/admin',

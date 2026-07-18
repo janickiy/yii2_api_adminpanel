@@ -4,15 +4,32 @@ declare(strict_types=1);
 
 namespace frontend\modules\api\controllers;
 
-use common\models\forms\NoteForm;
-use common\models\Notes;
+use application\dto\note\CreateNoteDto;
+use application\dto\note\NoteQueryDto;
+use application\dto\note\UpdateNoteDto;
+use application\services\NoteService;
+use domain\exceptions\NotFoundException;
+use domain\exceptions\PersistenceException;
+use frontend\modules\api\presenters\ApiPresenter;
 use OpenApi\Attributes as OA;
 use Yii;
+use yii\base\Module;
 use yii\filters\auth\HttpBearerAuth;
 use yii\filters\VerbFilter;
+use yii\web\NotFoundHttpException;
+use yii\web\ServerErrorHttpException;
 
-class NoteController extends BaseApiController
+final class NoteController extends BaseApiController
 {
+    public function __construct(
+        string $id,
+        Module $module,
+        private readonly NoteService $noteService,
+        array $config = [],
+    ) {
+        parent::__construct($id, $module, $config);
+    }
+
     public function behaviors(): array
     {
         $behaviors = parent::behaviors();
@@ -21,8 +38,8 @@ class NoteController extends BaseApiController
             'actions' => [
                 'index' => ['GET'],
                 'show' => ['GET'],
-                'store' => ['POST'],
-                'update' => ['PUT'],
+                'create' => ['POST'],
+                'update' => ['PUT', 'PATCH'],
                 'delete' => ['DELETE'],
             ],
         ];
@@ -36,248 +53,144 @@ class NoteController extends BaseApiController
 
     #[OA\Get(
         path: '/api/v1/notes',
-        operationId: 'notesIndex',
-        summary: 'Список заметок',
-        description: 'Возвращает все заметки текущего авторизованного пользователя.',
+        operationId: 'listNotes',
         security: [['bearerAuth' => []]],
         tags: ['Notes'],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Список заметок',
-                content: new OA\JsonContent(
-                    type: 'array',
-                    items: new OA\Items(ref: '#/components/schemas/Note'),
-                ),
-            ),
-            new OA\Response(
-                response: 401,
-                description: 'Пользователь не авторизован',
-                content: new OA\JsonContent(ref: '#/components/schemas/AuthError'),
-            ),
-        ],
+        responses: [new OA\Response(response: 200, description: 'Notes page')],
     )]
     public function actionIndex(): array
     {
-        return Notes::find()
-            ->where(['user_id' => $this->apiUserId()])
-            ->orderBy(['id' => SORT_DESC])
-            ->all();
+        $query = new NoteQueryDto();
+        $query->load(Yii::$app->request->get(), '');
+        if (!$query->validate()) {
+            return $this->validationResponse($query);
+        }
+
+        try {
+            $page = $this->noteService->list($this->apiUserId(), $query);
+        } catch (NotFoundException $exception) {
+            return $this->fieldError('category_id', $exception->getMessage());
+        }
+
+        return [
+            'data' => array_map(ApiPresenter::note(...), $page->items),
+            'meta' => [
+                'page' => $page->page,
+                'per_page' => $page->perPage,
+                'total' => $page->total,
+                'page_count' => $page->total === 0 ? 0 : (int) ceil($page->total / $page->perPage),
+            ],
+        ];
     }
 
     #[OA\Get(
         path: '/api/v1/notes/{id}',
-        operationId: 'notesShow',
-        summary: 'Просмотр заметки',
-        description: 'Возвращает заметку текущего пользователя по ID.',
+        operationId: 'showNote',
         security: [['bearerAuth' => []]],
         tags: ['Notes'],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                description: 'ID заметки',
-                in: 'path',
-                required: true,
-                schema: new OA\Schema(type: 'integer', example: 1),
-            ),
-        ],
         responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Заметка найдена',
-                content: new OA\JsonContent(ref: '#/components/schemas/Note'),
-            ),
-            new OA\Response(
-                response: 401,
-                description: 'Пользователь не авторизован',
-                content: new OA\JsonContent(ref: '#/components/schemas/AuthError'),
-            ),
-            new OA\Response(
-                response: 404,
-                description: 'Заметка не найдена',
-                content: new OA\JsonContent(ref: '#/components/schemas/NotFoundError'),
-            ),
+            new OA\Response(response: 200, description: 'Note'),
+            new OA\Response(response: 404, description: 'Not found'),
         ],
     )]
-    public function actionShow(int $id): array|Notes
+    public function actionShow(int $id): array
     {
-        $note = $this->findNote($id);
-
-        if ($note === null) {
-            Yii::$app->response->statusCode = 404;
-
-            return ['message' => 'Note not found'];
+        try {
+            $note = $this->noteService->get($this->apiUserId(), $id);
+        } catch (NotFoundException $exception) {
+            throw new NotFoundHttpException($exception->getMessage(), 0, $exception);
         }
 
-        return $note;
+        return ['data' => ApiPresenter::note($note)];
     }
 
     #[OA\Post(
-        path: '/api/v1/notes/store',
-        operationId: 'notesStore',
-        summary: 'Создание заметки',
-        description: 'Создает заметку для текущего авторизованного пользователя.',
+        path: '/api/v1/notes',
+        operationId: 'createNote',
         security: [['bearerAuth' => []]],
         tags: ['Notes'],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(ref: '#/components/schemas/NotePayload'),
-        ),
         responses: [
-            new OA\Response(
-                response: 201,
-                description: 'Заметка создана',
-                content: new OA\JsonContent(ref: '#/components/schemas/Note'),
-            ),
-            new OA\Response(
-                response: 401,
-                description: 'Пользователь не авторизован',
-                content: new OA\JsonContent(ref: '#/components/schemas/AuthError'),
-            ),
-            new OA\Response(
-                response: 422,
-                description: 'Ошибка валидации',
-                content: new OA\JsonContent(ref: '#/components/schemas/ValidationError'),
-            ),
+            new OA\Response(response: 201, description: 'Note created'),
+            new OA\Response(response: 422, description: 'Validation failed'),
         ],
     )]
-    public function actionStore(): array|Notes
+    public function actionCreate(): array
     {
-        $form = new NoteForm();
-        $form->load($this->bodyParams(), '');
-
-        if (!$form->validate()) {
-            return $this->validationResponse($form);
+        $dto = new CreateNoteDto();
+        $dto->load($this->bodyParams(), '');
+        if (!$dto->validate()) {
+            return $this->validationResponse($dto);
         }
 
-        $note = new Notes([
-            'user_id' => $this->apiUserId(),
-            'title' => $form->title,
-            'content' => $form->content,
-        ]);
-        $note->save(false);
+        try {
+            $note = $this->noteService->create($this->apiUserId(), $dto);
+        } catch (NotFoundException $exception) {
+            return $this->fieldError('category_id', $exception->getMessage());
+        } catch (PersistenceException $exception) {
+            throw new ServerErrorHttpException('Unable to create the note.', 0, $exception);
+        }
 
         Yii::$app->response->statusCode = 201;
 
-        return $note;
+        return ['data' => ApiPresenter::note($note)];
     }
 
     #[OA\Put(
-        path: '/api/v1/notes/update/{id}',
-        operationId: 'notesUpdate',
-        summary: 'Обновление заметки',
-        description: 'Обновляет заголовок и содержимое заметки текущего пользователя.',
+        path: '/api/v1/notes/{id}',
+        operationId: 'updateNote',
         security: [['bearerAuth' => []]],
         tags: ['Notes'],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                description: 'ID заметки',
-                in: 'path',
-                required: true,
-                schema: new OA\Schema(type: 'integer', example: 1),
-            ),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(ref: '#/components/schemas/NotePayload'),
-        ),
         responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Заметка обновлена',
-                content: new OA\JsonContent(ref: '#/components/schemas/Note'),
-            ),
-            new OA\Response(
-                response: 401,
-                description: 'Пользователь не авторизован',
-                content: new OA\JsonContent(ref: '#/components/schemas/AuthError'),
-            ),
-            new OA\Response(
-                response: 404,
-                description: 'Заметка не найдена',
-                content: new OA\JsonContent(ref: '#/components/schemas/NotFoundError'),
-            ),
-            new OA\Response(
-                response: 422,
-                description: 'Ошибка валидации',
-                content: new OA\JsonContent(ref: '#/components/schemas/ValidationError'),
-            ),
+            new OA\Response(response: 200, description: 'Note updated'),
+            new OA\Response(response: 404, description: 'Not found'),
+            new OA\Response(response: 422, description: 'Validation failed'),
         ],
     )]
-    public function actionUpdate(int $id): array|Notes
+    public function actionUpdate(int $id): array
     {
-        $note = $this->findNote($id);
-
-        if ($note === null) {
-            Yii::$app->response->statusCode = 404;
-
-            return ['message' => 'Note not found'];
+        $dto = new UpdateNoteDto();
+        $dto->load($this->bodyParams(), '');
+        if (!$dto->validate()) {
+            return $this->validationResponse($dto);
         }
 
-        $form = new NoteForm();
-        $form->load($this->bodyParams(), '');
+        try {
+            $note = $this->noteService->update($this->apiUserId(), $id, $dto);
+        } catch (NotFoundException $exception) {
+            if (str_starts_with($exception->getMessage(), 'Category')) {
+                return $this->fieldError('category_id', $exception->getMessage());
+            }
 
-        if (!$form->validate()) {
-            return $this->validationResponse($form);
+            throw new NotFoundHttpException($exception->getMessage(), 0, $exception);
+        } catch (PersistenceException $exception) {
+            throw new ServerErrorHttpException('Unable to update the note.', 0, $exception);
         }
 
-        $note->title = (string) $form->title;
-        $note->content = (string) $form->content;
-        $note->save(false);
-
-        return $note;
+        return ['data' => ApiPresenter::note($note)];
     }
 
     #[OA\Delete(
-        path: '/api/v1/notes/delete/{id}',
-        operationId: 'notesDestroy',
-        summary: 'Удаление заметки',
-        description: 'Удаляет заметку текущего пользователя по ID.',
+        path: '/api/v1/notes/{id}',
+        operationId: 'deleteNote',
         security: [['bearerAuth' => []]],
         tags: ['Notes'],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                description: 'ID заметки',
-                in: 'path',
-                required: true,
-                schema: new OA\Schema(type: 'integer', example: 1),
-            ),
-        ],
         responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Заметка удалена',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'message', type: 'string', example: 'Note deleted'),
-                    ],
-                    type: 'object',
-                ),
-            ),
-            new OA\Response(
-                response: 401,
-                description: 'Пользователь не авторизован',
-                content: new OA\JsonContent(ref: '#/components/schemas/AuthError'),
-            ),
+            new OA\Response(response: 204, description: 'Note deleted'),
+            new OA\Response(response: 404, description: 'Not found'),
         ],
     )]
-    public function actionDelete(int $id): array
+    public function actionDelete(int $id): null
     {
-        $note = $this->findNote($id);
-
-        if ($note !== null) {
-            $note->delete();
+        try {
+            $this->noteService->delete($this->apiUserId(), $id);
+        } catch (NotFoundException $exception) {
+            throw new NotFoundHttpException($exception->getMessage(), 0, $exception);
+        } catch (PersistenceException $exception) {
+            throw new ServerErrorHttpException('Unable to delete the note.', 0, $exception);
         }
 
-        return ['message' => 'Note deleted'];
-    }
+        Yii::$app->response->statusCode = 204;
 
-    private function findNote(int $id): ?Notes
-    {
-        return Notes::find()
-            ->where(['id' => $id, 'user_id' => $this->apiUserId()])
-            ->one();
+        return null;
     }
 }

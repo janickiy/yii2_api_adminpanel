@@ -6,9 +6,12 @@ namespace backend\controllers;
 
 use common\models\Admin;
 use Yii;
+use yii\base\Model;
+use yii\db\ActiveRecord;
 use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\ForbiddenHttpException;
+use yii\web\ServerErrorHttpException;
 
 abstract class BaseWebController extends Controller
 {
@@ -54,5 +57,33 @@ abstract class BaseWebController extends Controller
     protected function can(string $permissions): bool
     {
         return $this->admin()->canAccess($permissions);
+    }
+
+    protected function copyErrors(Model $source, Model $target): void
+    {
+        $targetAttributes = array_flip($target->attributes());
+
+        foreach ($source->getErrors() as $attribute => $errors) {
+            $targetAttribute = isset($targetAttributes[$attribute]) ? $attribute : '';
+            foreach ($errors as $error) {
+                $target->addError($targetAttribute, $error);
+            }
+        }
+    }
+
+    protected function deleteRecord(ActiveRecord $record): void
+    {
+        if ($record->delete() === 1) {
+            return;
+        }
+
+        Yii::error([
+            'event' => 'admin.delete_failed',
+            'model' => $record::class,
+            'primary_key' => $record->getPrimaryKey(),
+            'errors' => $record->getErrors(),
+        ], 'application.admin');
+
+        throw new ServerErrorHttpException('Не удалось удалить запись.');
     }
 }

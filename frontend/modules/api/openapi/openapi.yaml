@@ -1,0 +1,368 @@
+openapi: 3.0.3
+info:
+  title: Notes Service API
+  version: 1.0.0
+  description: REST API регистрации, JWT-аутентификации и управления заметками пользователя.
+servers:
+  - url: /
+    description: Текущий сервер
+tags:
+  - name: Auth
+  - name: Notes
+  - name: Categories
+paths:
+  /api/v1/register:
+    post:
+      tags: [Auth]
+      summary: Регистрация пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Пользователь создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/v1/login:
+    post:
+      tags: [Auth]
+      summary: Получение JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Авторизация выполнена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/v1/logout:
+    post:
+      tags: [Auth]
+      summary: Отзыв текущего JWT
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Токен отозван
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/categories:
+    get:
+      tags: [Categories]
+      summary: Доступные категории заметок
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список категорий
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/notes:
+    get:
+      tags: [Notes]
+      summary: Заметки текущего пользователя
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category_id
+          in: query
+          schema: {type: integer, minimum: 1}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 1000000, default: 1}
+        - name: per_page
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Страница заметок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteCollection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags: [Notes]
+      summary: Создать заметку
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotePayload'
+      responses:
+        '201':
+          description: Заметка создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/v1/notes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: integer, minimum: 1}
+    get:
+      tags: [Notes]
+      summary: Получить свою заметку
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Заметка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Notes]
+      summary: Обновить свою заметку
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotePayload'
+      responses:
+        '200':
+          description: Заметка обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    patch:
+      tags: [Notes]
+      summary: Обновить свою заметку
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotePayload'
+      responses:
+        '200':
+          description: Заметка обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Notes]
+      summary: Удалить свою заметку
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Заметка удалена
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Unauthorized:
+      description: Требуется действующий JWT
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorResponse'}
+    NotFound:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorResponse'}
+    Conflict:
+      description: Конфликт данных
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorResponse'}
+    ValidationError:
+      description: Ошибка валидации
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ValidationErrorResponse'}
+    TooManyRequests:
+      description: Превышен лимит публичных запросов
+      headers:
+        Retry-After:
+          description: Число секунд до следующего окна запросов
+          schema: {type: integer, minimum: 1}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorResponse'}
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name: {type: string, maxLength: 160, example: Иван Иванов}
+        email: {type: string, format: email, example: user@example.com}
+        password: {type: string, format: password, minLength: 8, example: Secret123!}
+        password_confirmation: {type: string, format: password, example: Secret123!}
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, format: email, example: user@example.com}
+        password: {type: string, format: password, example: Secret123!}
+    NotePayload:
+      type: object
+      required: [category_id, title, content]
+      properties:
+        category_id: {type: integer, minimum: 1, example: 1}
+        title: {type: string, maxLength: 255, example: План на день}
+        content: {type: string, example: Подготовить релиз и проверить API.}
+    User:
+      type: object
+      required: [id, name, email, created_at, updated_at]
+      properties:
+        id: {type: integer, example: 1}
+        name: {type: string, example: Иван Иванов}
+        email: {type: string, format: email, example: user@example.com}
+        created_at: {type: string, format: date-time, nullable: true}
+        updated_at: {type: string, format: date-time, nullable: true}
+    Category:
+      type: object
+      required: [id, name]
+      properties:
+        id: {type: integer, example: 1}
+        name: {type: string, example: Работа}
+    Note:
+      type: object
+      required: [id, user_id, category_id, title, content]
+      properties:
+        id: {type: integer, example: 1}
+        user_id: {type: integer, example: 1}
+        category_id: {type: integer, example: 2}
+        title: {type: string, example: План на день}
+        content: {type: string, example: Подготовить релиз и проверить API.}
+        created_at: {type: string, format: date-time, nullable: true}
+        updated_at: {type: string, format: date-time, nullable: true}
+    UserResponse:
+      type: object
+      required: [data]
+      properties:
+        data: {$ref: '#/components/schemas/User'}
+    AuthResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [token, token_type, user]
+          properties:
+            token: {type: string}
+            token_type: {type: string, example: Bearer}
+            user: {$ref: '#/components/schemas/User'}
+    NoteResponse:
+      type: object
+      required: [data]
+      properties:
+        data: {$ref: '#/components/schemas/Note'}
+    NoteCollection:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Note'}
+        meta:
+          type: object
+          required: [page, per_page, total, page_count]
+          properties:
+            page: {type: integer, example: 1}
+            per_page: {type: integer, example: 20}
+            total: {type: integer, example: 1}
+            page_count: {type: integer, example: 1}
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [status, message, request_id]
+          properties:
+            status: {type: integer, example: 404}
+            message: {type: string, example: Note not found.}
+            request_id: {type: string, example: 95cd3ad36ba6e355}
+    ValidationErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [status, message, fields]
+          properties:
+            status: {type: integer, example: 422}
+            message: {type: string, example: Validation failed.}
+            fields:
+              type: object
+              additionalProperties:
+                type: array
+                items: {type: string}

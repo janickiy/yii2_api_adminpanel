@@ -38,18 +38,25 @@ class SiteController extends Controller
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         return [
-            'name' => 'Yii2 API Adminpanel',
+            'name' => 'Notes Service API',
+            'version' => '1.0.0',
             'documentation' => '/api/documentation',
+            'resources' => [
+                'auth' => ['/api/v1/register', '/api/v1/login', '/api/v1/logout'],
+                'notes' => '/api/v1/notes',
+                'categories' => '/api/v1/categories',
+            ],
         ];
     }
 
     public function actionError(): array
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-        $exception = Yii::$app->errorHandler->exception;
-
         return [
-            'message' => $exception?->getMessage() ?? 'Error',
+            'error' => [
+                'status' => Yii::$app->response->statusCode,
+                'message' => 'API request failed.',
+            ],
         ];
     }
 }

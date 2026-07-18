@@ -4,85 +4,45 @@ declare(strict_types=1);
 
 namespace common\models;
 
-use Firebase\JWT\ExpiredException;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
-use Throwable;
+use domain\entities\User as UserEntity;
+use domain\exceptions\AuthenticationException;
+use domain\mappers\UserDataMapperInterface;
+use domain\services\PasswordHasherInterface;
+use domain\services\TokenManagerInterface;
+use infrastructure\persistence\records\UserRecord;
+use RuntimeException;
 use Yii;
-use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveQuery;
-use yii\db\ActiveRecord;
-use yii\db\Expression;
 use yii\web\IdentityInterface;
 
 /**
+ * Yii web identity kept as a compatibility adapter around the layered domain.
+ *
  * @property int $id
  * @property string $name
  * @property string $email
- * @property string|null $email_verified_at
  * @property string $password
- * @property string|null $remember_token
  * @property string $created_at
  * @property string $updated_at
  */
-class User extends ActiveRecord implements IdentityInterface
+class User extends UserRecord implements IdentityInterface
 {
-    public static function tableName(): string
-    {
-        return '{{%users}}';
-    }
-
-    public function behaviors(): array
-    {
-        return [
-            [
-                'class' => TimestampBehavior::class,
-                'createdAtAttribute' => 'created_at',
-                'updatedAtAttribute' => 'updated_at',
-                'value' => new Expression('NOW()'),
-            ],
-        ];
-    }
-
-    public function rules(): array
-    {
-        return [
-            [['name', 'email', 'password'], 'required'],
-            [['name', 'email', 'password', 'remember_token'], 'string', 'max' => 255],
-            ['email', 'email'],
-            ['email', 'unique'],
-            [['email_verified_at', 'created_at', 'updated_at'], 'safe'],
-        ];
-    }
-
-    public function fields(): array
-    {
-        return ['id', 'name', 'email', 'created_at', 'updated_at'];
-    }
-
     public static function findIdentity($id): ?self
     {
-        return self::findOne((int) $id);
+        $identity = static::findOne(['id' => (int) $id]);
+
+        return $identity instanceof self ? $identity : null;
     }
 
     public static function findIdentityByAccessToken($token, $type = null): ?self
     {
         try {
-            $payload = self::decodeAccessToken((string) $token);
-        } catch (ExpiredException) {
-            return null;
-        } catch (Throwable) {
+            $userId = self::tokenManager()->validateAndGetUserId((string) $token);
+        } catch (AuthenticationException) {
             return null;
         }
 
-        $jti = (string) ($payload['jti'] ?? '');
-        if ($jti === '' || RevokedToken::isRevoked($jti)) {
-            return null;
-        }
-
-        $userId = (int) ($payload['sub'] ?? 0);
-
-        return $userId > 0 ? self::findIdentity($userId) : null;
+        return self::findIdentity($userId);
     }
 
     public function getId(): int
@@ -100,6 +60,9 @@ class User extends ActiveRecord implements IdentityInterface
         return false;
     }
 
+    /**
+     * @return ActiveQuery<Notes>
+     */
     public function getNotes(): ActiveQuery
     {
         return $this->hasMany(Notes::class, ['user_id' => 'id']);
@@ -107,53 +70,65 @@ class User extends ActiveRecord implements IdentityInterface
 
     public function setPassword(string $password): void
     {
-        $this->password = Yii::$app->security->generatePasswordHash($password);
+        $this->password = self::passwordHasher()->hash($password);
     }
 
     public function validatePassword(string $password): bool
     {
-        return Yii::$app->security->validatePassword($password, $this->password);
+        return self::passwordHasher()->verify($password, (string) $this->password);
     }
 
     public function generateAccessToken(): string
     {
-        $now = time();
-        $ttl = (int) Yii::$app->params['jwtTtl'];
-
-        $payload = [
-            'iss' => Yii::$app->params['jwtIssuer'],
-            'iat' => $now,
-            'nbf' => $now,
-            'exp' => $now + $ttl,
-            'sub' => (string) $this->id,
-            'jti' => bin2hex(random_bytes(16)),
-        ];
-
-        return JWT::encode($payload, self::jwtSecret(), 'HS256');
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public static function decodeAccessToken(string $token): array
-    {
-        return (array) JWT::decode($token, new Key(self::jwtSecret(), 'HS256'));
+        return self::tokenManager()->issue($this->toDomainEntity());
     }
 
     public static function revokeAccessToken(string $token): void
     {
-        $payload = self::decodeAccessToken($token);
-        $jti = (string) ($payload['jti'] ?? '');
-
-        if ($jti === '') {
-            return;
-        }
-
-        RevokedToken::revoke($jti, (int) ($payload['exp'] ?? time()));
+        self::tokenManager()->revoke($token);
     }
 
-    private static function jwtSecret(): string
+    private function toDomainEntity(): UserEntity
     {
-        return (string) Yii::$app->params['jwtSecret'];
+        $entity = self::userMapper()->fromArray($this->getAttributes());
+
+        if (!$entity instanceof UserEntity) {
+            throw new RuntimeException('The configured user mapper returned an unexpected entity type.');
+        }
+
+        return $entity;
+    }
+
+    private static function tokenManager(): TokenManagerInterface
+    {
+        $service = Yii::$container->get(TokenManagerInterface::class);
+
+        if (!$service instanceof TokenManagerInterface) {
+            throw new RuntimeException('TokenManagerInterface is not configured in the Yii DI container.');
+        }
+
+        return $service;
+    }
+
+    private static function passwordHasher(): PasswordHasherInterface
+    {
+        $service = Yii::$container->get(PasswordHasherInterface::class);
+
+        if (!$service instanceof PasswordHasherInterface) {
+            throw new RuntimeException('PasswordHasherInterface is not configured in the Yii DI container.');
+        }
+
+        return $service;
+    }
+
+    private static function userMapper(): UserDataMapperInterface
+    {
+        $mapper = Yii::$container->get(UserDataMapperInterface::class);
+
+        if (!$mapper instanceof UserDataMapperInterface) {
+            throw new RuntimeException('UserDataMapperInterface is not configured in the Yii DI container.');
+        }
+
+        return $mapper;
     }
 }

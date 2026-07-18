@@ -58,11 +58,11 @@ HTML;
 
     public function actionSpec(): Response
     {
-        $specFile = Yii::getAlias('@runtime/openapi.json');
+        $specFile = Yii::getAlias('@api/openapi/openapi.yaml');
 
         Yii::$app->response->format = Response::FORMAT_RAW;
-        Yii::$app->response->headers->set('Content-Type', 'application/json; charset=UTF-8');
-        Yii::$app->response->content = is_file($specFile) ? file_get_contents($specFile) : '{}';
+        Yii::$app->response->headers->set('Content-Type', 'application/yaml; charset=UTF-8');
+        Yii::$app->response->content = (string) file_get_contents($specFile);
 
         return Yii::$app->response;
     }

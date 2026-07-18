@@ -34,9 +34,9 @@ Thumbs.db
 /console/runtime/*
 !/console/runtime/.gitignore
 
-# Docker database volumes
-/docker/mysql_data
-/docker/pg_data
+# Docker service volumes
+/docker/postgres/data
+/docker/redis/data
 
 # composer itself is not needed
 composer.phar
@@ -48,6 +48,7 @@ composer.phar
 phpunit.phar
 # local phpunit config
 /phpunit.xml
+/.phpunit.cache/
 
 tests/_output/*
 tests/_support/_generated

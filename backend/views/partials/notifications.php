@@ -5,17 +5,17 @@ declare(strict_types=1);
 use yii\helpers\Html;
 
 $flashes = [
-    'message' => ['alert-warning', 'fa fa-exclamation-triangle'],
-    'success' => ['alert-success', 'fa-fw fa fa-check'],
-    'error' => ['alert-danger', 'fas fa-times'],
+    'message' => ['alert-warning', 'bi bi-exclamation-triangle'],
+    'success' => ['alert-success', 'bi bi-check-circle'],
+    'error' => ['alert-danger', 'bi bi-x-circle'],
 ];
 ?>
 <?php foreach ($flashes as $key => [$class, $icon]): ?>
     <?php if (Yii::$app->session->hasFlash($key)): ?>
-        <div class="alert <?= $class ?>">
-            <button class="close" data-dismiss="alert">x</button>
-            <i class="<?= $icon ?>" aria-hidden="true"></i>
+        <div class="alert <?= $class ?> alert-dismissible fade show" role="alert">
+            <i class="<?= $icon ?> me-2" aria-hidden="true"></i>
             <?= Html::encode((string) Yii::$app->session->getFlash($key)) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
         </div>
     <?php endif ?>
 <?php endforeach ?>

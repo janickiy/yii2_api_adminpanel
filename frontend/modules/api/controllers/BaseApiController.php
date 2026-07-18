@@ -28,36 +28,49 @@ abstract class BaseApiController extends Controller
         return $behaviors;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     protected function bodyParams(): array
     {
-        return Yii::$app->request->getBodyParams();
+        $params = Yii::$app->request->getBodyParams();
+
+        return is_array($params) ? $params : [];
     }
 
-    /**
-     * @return array{message: string, errors: array<string, mixed>}
-     */
+    /** @return array{error: array{status: int, message: string, fields: array<string, list<string>>}} */
     protected function validationResponse(Model $model): array
     {
         Yii::$app->response->statusCode = 422;
 
         return [
-            'message' => 'Validation failed.',
-            'errors' => $model->getErrors(),
+            'error' => [
+                'status' => 422,
+                'message' => 'Validation failed.',
+                'fields' => $model->getErrors(),
+            ],
         ];
     }
 
-    protected function bearerToken(): ?string
+    /** @return array{error: array{status: int, message: string, fields: array<string, list<string>>}} */
+    protected function fieldError(string $field, string $message): array
+    {
+        Yii::$app->response->statusCode = 422;
+
+        return [
+            'error' => [
+                'status' => 422,
+                'message' => 'Validation failed.',
+                'fields' => [$field => [$message]],
+            ],
+        ];
+    }
+
+    protected function bearerToken(): string
     {
         $header = Yii::$app->request->headers->get('Authorization', '');
 
-        if (preg_match('/^Bearer\s+(.*?)$/i', $header, $matches)) {
-            return $matches[1];
-        }
-
-        return null;
+        return preg_match('/^Bearer\s+(\S+)$/i', $header, $matches) === 1
+            ? $matches[1]
+            : '';
     }
 
     protected function apiUser(): User

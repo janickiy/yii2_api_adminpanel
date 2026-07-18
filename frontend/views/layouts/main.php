@@ -27,7 +27,8 @@ $this->registerMetaTag(['name' => 'viewport', 'content' => 'width=device-width, 
     <nav class="container d-flex align-items-center justify-content-between py-3">
         <a class="brand" href="<?= Url::to(['/site/index']) ?>"><?= Html::encode(Yii::$app->name) ?></a>
         <div class="nav-links">
-            <a href="/login">Admin</a>
+            <a href="<?= Url::to(['/site/index', '#' => 'feedback']) ?>">Обратная связь</a>
+            <a href="/login">Админка</a>
             <a href="/api/documentation">Swagger</a>
             <a href="/api/v1/">API</a>
         </div>

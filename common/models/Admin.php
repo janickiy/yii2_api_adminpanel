@@ -16,7 +16,7 @@ use yii\web\IdentityInterface;
  * @property string $password
  * @property string|null $name
  * @property string $role
- * @property string|null $remember_token
+ * @property string|null $auth_key
  * @property string $created_at
  * @property string $updated_at
  */
@@ -24,11 +24,10 @@ class Admin extends ActiveRecord implements IdentityInterface
 {
     public const ROLE_ADMIN = 'admin';
     public const ROLE_MODERATOR = 'moderator';
-    public const ROLE_EDITOR = 'editor';
 
     public static function tableName(): string
     {
-        return '{{%admin}}';
+        return '{{%admins}}';
     }
 
     public function behaviors(): array
@@ -47,7 +46,11 @@ class Admin extends ActiveRecord implements IdentityInterface
     {
         return [
             [['login', 'password', 'role'], 'required'],
-            [['login', 'password', 'name', 'role', 'remember_token'], 'string', 'max' => 255],
+            ['login', 'string', 'max' => 120],
+            ['name', 'string', 'max' => 160],
+            ['password', 'string', 'max' => 255],
+            ['role', 'string', 'max' => 20],
+            ['auth_key', 'string', 'max' => 64],
             ['login', 'unique'],
             ['role', 'in', 'range' => array_keys(self::roleLabels())],
             [['created_at', 'updated_at'], 'safe'],
@@ -62,9 +65,8 @@ class Admin extends ActiveRecord implements IdentityInterface
     public static function roleLabels(): array
     {
         return [
-            self::ROLE_ADMIN => 'Админ',
+            self::ROLE_ADMIN => 'Администратор',
             self::ROLE_MODERATOR => 'Модератор',
-            self::ROLE_EDITOR => 'Редактор',
         ];
     }
 
@@ -85,12 +87,12 @@ class Admin extends ActiveRecord implements IdentityInterface
 
     public function getAuthKey(): ?string
     {
-        return $this->remember_token;
+        return $this->auth_key;
     }
 
     public function validateAuthKey($authKey): bool
     {
-        return hash_equals((string) $this->remember_token, (string) $authKey);
+        return hash_equals((string) $this->auth_key, (string) $authKey);
     }
 
     public function setPassword(string $password): void
@@ -114,8 +116,8 @@ class Admin extends ActiveRecord implements IdentityInterface
 
     public function beforeSave($insert): bool
     {
-        if ($this->remember_token === null || $this->remember_token === '') {
-            $this->remember_token = Yii::$app->security->generateRandomString(64);
+        if ($this->auth_key === null || $this->auth_key === '') {
+            $this->auth_key = Yii::$app->security->generateRandomString(64);
         }
 
         return parent::beforeSave($insert);

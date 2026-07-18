@@ -1,6 +1,6 @@
 {
     "name": "local/yii2-api-adminpanel",
-    "description": "Yii2 rewrite of the Laravel API admin panel.",
+    "description": "Layered notes service on Yii2 Advanced, PHP 8.4 and PostgreSQL.",
     "keywords": ["yii2", "adminpanel", "api", "jwt", "swagger"],
     "homepage": "https://www.yiiframework.com/",
     "type": "project",
@@ -14,7 +14,7 @@
     },
     "minimum-stability": "stable",
     "require": {
-        "php": ">=8.2",
+        "php": "^8.4",
         "yiisoft/yii2": "~2.0.54",
         "yiisoft/yii2-bootstrap5": "~2.0.2",
         "yiisoft/yii2-symfonymailer": "~2.0.3",
@@ -37,7 +37,8 @@
         "yiisoft/yii2-coding-standards": "^3.0",
         "yiisoft/yii2-debug": "~2.1.0",
         "yiisoft/yii2-faker": "~2.0.0",
-        "yiisoft/yii2-gii": "~2.2.0"
+        "yiisoft/yii2-gii": "~2.2.0",
+        "phpunit/phpunit": "^12.5"
     },
     "config": {
         "allow-plugins": {
@@ -59,9 +60,23 @@
             "yii\\composer\\Installer::postCreateProject",
             "yii\\composer\\Installer::postInstall"
         ],
-        "swagger": "./vendor/bin/openapi --bootstrap frontend/modules/api/openapi/bootstrap.php frontend/modules/api/controllers common/models frontend/modules/api/openapi --format json --output frontend/runtime/openapi.json",
+        "swagger": "./vendor/bin/openapi --bootstrap frontend/modules/api/openapi/bootstrap.php frontend/modules/api --format json --output frontend/runtime/openapi.json",
         "static": "./vendor/bin/phpstan --memory-limit=-1",
-        "tests": "./vendor/bin/codecept build && ./vendor/bin/codecept run --env php-builtin"
+        "test": "./vendor/bin/phpunit --configuration phpunit.xml.dist",
+        "tests": "@test",
+        "tests:codeception": "./vendor/bin/codecept build && ./vendor/bin/codecept run"
+    },
+    "autoload": {
+        "psr-4": {
+            "application\\": "application/",
+            "domain\\": "domain/",
+            "infrastructure\\": "infrastructure/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "tests\\": "tests/"
+        }
     },
     "extra": {
         "yii\\composer\\Installer::postCreateProject": {

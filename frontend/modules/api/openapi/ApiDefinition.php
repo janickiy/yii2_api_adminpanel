@@ -8,12 +8,12 @@ use OpenApi\Attributes as OA;
 
 #[OA\Info(
     version: '1.0.0',
-    title: 'Yii2 API Adminpanel',
-    description: 'Yii2 rewrite of the Laravel API admin panel with JWT notes API and AdminLTE control panel.',
+    title: 'Notes Service API',
+    description: 'JWT REST API for categorized user notes.',
 )]
 #[OA\Server(
-    url: 'http://localhost:8082',
-    description: 'Docker local server',
+    url: '/',
+    description: 'Current server',
 )]
 #[OA\Tag(
     name: 'Auth',
@@ -22,6 +22,10 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(
     name: 'Notes',
     description: 'Работа с заметками авторизованного пользователя',
+)]
+#[OA\Tag(
+    name: 'Categories',
+    description: 'Категории заметок',
 )]
 #[OA\Tag(
     name: 'System',
@@ -41,52 +45,54 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'id', type: 'integer', example: 1),
         new OA\Property(property: 'name', type: 'string', example: 'Иван Иванов'),
         new OA\Property(property: 'email', type: 'string', format: 'email', example: 'user@example.com'),
-        new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2026-07-04 22:30:00'),
-        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2026-07-04 22:30:00'),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2026-07-04T22:30:00+00:00'),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2026-07-04T22:30:00+00:00'),
     ],
     type: 'object',
 )]
 #[OA\Schema(
     schema: 'Note',
-    required: ['id', 'user_id', 'title', 'content', 'created_at', 'updated_at'],
+    required: ['id', 'user_id', 'category_id', 'title', 'content'],
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 1),
         new OA\Property(property: 'user_id', type: 'integer', example: 1),
+        new OA\Property(property: 'category_id', type: 'integer', example: 2),
         new OA\Property(property: 'title', type: 'string', example: 'Планы на день'),
         new OA\Property(property: 'content', type: 'string', example: 'Подготовить релиз и проверить API.'),
-        new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2026-07-04 22:30:00'),
-        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2026-07-04 22:30:00'),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2026-07-04T22:30:00+00:00'),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2026-07-04T22:30:00+00:00'),
     ],
     type: 'object',
 )]
 #[OA\Schema(
     schema: 'NotePayload',
-    required: ['title', 'content'],
+    required: ['category_id', 'title', 'content'],
     properties: [
+        new OA\Property(property: 'category_id', type: 'integer', minimum: 1, example: 2),
         new OA\Property(property: 'title', type: 'string', maxLength: 255, example: 'Планы на день'),
         new OA\Property(property: 'content', type: 'string', example: 'Подготовить релиз и проверить API.'),
     ],
     type: 'object',
 )]
 #[OA\Schema(
+    schema: 'Category',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer', example: 2),
+        new OA\Property(property: 'name', type: 'string', example: 'Работа'),
+    ],
+    type: 'object',
+)]
+#[OA\Schema(
     schema: 'ValidationError',
     properties: [
-        new OA\Property(property: 'message', type: 'string', example: 'Validation failed.'),
-        new OA\Property(property: 'errors', type: 'object'),
+        new OA\Property(property: 'error', type: 'object'),
     ],
     type: 'object',
 )]
 #[OA\Schema(
-    schema: 'AuthError',
+    schema: 'ErrorResponse',
     properties: [
-        new OA\Property(property: 'error', type: 'string', example: 'Invalid credentials'),
-    ],
-    type: 'object',
-)]
-#[OA\Schema(
-    schema: 'NotFoundError',
-    properties: [
-        new OA\Property(property: 'message', type: 'string', example: 'Note not found'),
+        new OA\Property(property: 'error', type: 'object'),
     ],
     type: 'object',
 )]

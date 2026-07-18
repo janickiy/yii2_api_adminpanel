@@ -23,12 +23,13 @@ class AdminForm extends Model
     {
         return [
             [['login', 'name'], 'required'],
-            [['login', 'name'], 'string', 'min' => 3, 'max' => 255],
+            ['login', 'string', 'min' => 3, 'max' => 120],
+            ['name', 'string', 'min' => 3, 'max' => 160],
             ['id', 'integer'],
             ['role', 'required', 'on' => self::SCENARIO_CREATE],
             ['role', 'in', 'range' => array_keys(Admin::roleLabels())],
             ['password', 'required', 'on' => self::SCENARIO_CREATE],
-            [['password', 'password_again'], 'string', 'min' => 6],
+            [['password', 'password_again'], 'string', 'min' => 8],
             ['password_again', 'compare', 'compareAttribute' => 'password'],
             ['login', 'validateLogin'],
         ];

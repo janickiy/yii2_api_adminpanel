@@ -4,17 +4,34 @@ declare(strict_types=1);
 
 namespace frontend\modules\api\controllers;
 
-use common\models\forms\LoginForm;
-use common\models\forms\RegisterForm;
-use common\models\User;
+use application\dto\auth\LoginUserDto;
+use application\dto\auth\RegisterUserDto;
+use application\services\AuthService;
+use common\filters\PublicRateLimitFilter;
+use domain\exceptions\AuthenticationException;
+use domain\exceptions\ConflictException;
+use domain\exceptions\PersistenceException;
+use frontend\modules\api\presenters\ApiPresenter;
 use OpenApi\Attributes as OA;
-use Throwable;
 use Yii;
+use yii\base\Module;
 use yii\filters\auth\HttpBearerAuth;
 use yii\filters\VerbFilter;
+use yii\web\ConflictHttpException;
+use yii\web\ServerErrorHttpException;
+use yii\web\UnauthorizedHttpException;
 
-class AuthController extends BaseApiController
+final class AuthController extends BaseApiController
 {
+    public function __construct(
+        string $id,
+        Module $module,
+        private readonly AuthService $authService,
+        array $config = [],
+    ) {
+        parent::__construct($id, $module, $config);
+    }
+
     public function behaviors(): array
     {
         $behaviors = parent::behaviors();
@@ -31,153 +48,107 @@ class AuthController extends BaseApiController
             'user' => Yii::$app->get('apiUser'),
             'except' => ['register', 'login'],
         ];
+        $behaviors['publicRateLimit'] = [
+            'class' => PublicRateLimitFilter::class,
+            'only' => ['register', 'login'],
+            'limit' => 10,
+            'window' => 60,
+            'scope' => 'api-auth',
+        ];
 
         return $behaviors;
     }
 
     #[OA\Post(
         path: '/api/v1/register',
-        operationId: 'authRegister',
-        summary: 'Регистрация нового пользователя',
-        description: 'Создает новый аккаунт пользователя.',
+        operationId: 'register',
         tags: ['Auth'],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['name', 'email', 'password', 'confirm_password'],
-                properties: [
-                    new OA\Property(property: 'name', type: 'string', example: 'Иван Иванов'),
-                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'user@example.com'),
-                    new OA\Property(property: 'password', type: 'string', format: 'password', example: 'Secret123!'),
-                    new OA\Property(property: 'confirm_password', type: 'string', format: 'password', example: 'Secret123!'),
-                ],
-                type: 'object',
-            ),
-        ),
         responses: [
-            new OA\Response(
-                response: 201,
-                description: 'Пользователь успешно создан',
-                content: new OA\JsonContent(ref: '#/components/schemas/User'),
-            ),
-            new OA\Response(
-                response: 422,
-                description: 'Ошибка валидации',
-                content: new OA\JsonContent(ref: '#/components/schemas/ValidationError'),
-            ),
+            new OA\Response(response: 201, description: 'User created'),
+            new OA\Response(response: 409, description: 'Email already exists'),
+            new OA\Response(response: 422, description: 'Validation failed'),
+            new OA\Response(response: 429, description: 'Too many requests'),
         ],
     )]
-    public function actionRegister(): array|User
+    public function actionRegister(): array
     {
-        $form = new RegisterForm();
-        $form->load($this->bodyParams(), '');
-
-        if (!$form->validate()) {
-            return $this->validationResponse($form);
+        $dto = new RegisterUserDto();
+        $dto->load($this->bodyParams(), '');
+        if (!$dto->validate()) {
+            return $this->validationResponse($dto);
         }
 
-        $user = new User([
-            'name' => $form->name,
-            'email' => $form->email,
-        ]);
-        $user->setPassword((string) $form->password);
-        $user->save(false);
+        try {
+            $user = $this->authService->register($dto);
+        } catch (ConflictException $exception) {
+            throw new ConflictHttpException($exception->getMessage(), 0, $exception);
+        } catch (PersistenceException $exception) {
+            Yii::error([
+                'event' => 'auth.register.persistence_error',
+                'exception_class' => $exception::class,
+            ], 'application.api');
+            throw new ServerErrorHttpException('Unable to create the user.', 0, $exception);
+        }
 
         Yii::$app->response->statusCode = 201;
 
-        return $user;
+        return ['data' => ApiPresenter::user($user)];
     }
 
     #[OA\Post(
         path: '/api/v1/login',
-        operationId: 'authLogin',
-        summary: 'Авторизация пользователя',
-        description: 'Проверяет учетные данные и выдает JWT Bearer token.',
+        operationId: 'login',
         tags: ['Auth'],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['email', 'password'],
-                properties: [
-                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'user@example.com'),
-                    new OA\Property(property: 'password', type: 'string', format: 'password', example: 'Secret123!'),
-                ],
-                type: 'object',
-            ),
-        ),
         responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Успешный вход',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'token', type: 'string', example: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...'),
-                    ],
-                    type: 'object',
-                ),
-            ),
-            new OA\Response(
-                response: 401,
-                description: 'Неверный логин или пароль',
-                content: new OA\JsonContent(ref: '#/components/schemas/AuthError'),
-            ),
-            new OA\Response(
-                response: 422,
-                description: 'Ошибка валидации',
-                content: new OA\JsonContent(ref: '#/components/schemas/ValidationError'),
-            ),
+            new OA\Response(response: 200, description: 'Authenticated'),
+            new OA\Response(response: 401, description: 'Invalid credentials'),
+            new OA\Response(response: 422, description: 'Validation failed'),
+            new OA\Response(response: 429, description: 'Too many requests'),
         ],
     )]
     public function actionLogin(): array
     {
-        $form = new LoginForm();
-        $form->load($this->bodyParams(), '');
-
-        if (!$form->validate()) {
-            Yii::$app->response->statusCode = 401;
-
-            return ['error' => 'Invalid credentials'];
+        $dto = new LoginUserDto();
+        $dto->load($this->bodyParams(), '');
+        if (!$dto->validate()) {
+            return $this->validationResponse($dto);
         }
 
-        return ['token' => $form->getUser()?->generateAccessToken()];
+        try {
+            $result = $this->authService->login($dto);
+        } catch (AuthenticationException $exception) {
+            throw new UnauthorizedHttpException($exception->getMessage(), 0, $exception);
+        }
+
+        return [
+            'data' => [
+                'token' => $result->token,
+                'token_type' => 'Bearer',
+                'user' => ApiPresenter::user($result->user),
+            ],
+        ];
     }
 
     #[OA\Post(
         path: '/api/v1/logout',
-        operationId: 'authLogout',
-        summary: 'Выход пользователя',
-        description: 'Добавляет текущий JWT в blacklist до истечения срока действия.',
+        operationId: 'logout',
         security: [['bearerAuth' => []]],
         tags: ['Auth'],
         responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Токен успешно отозван',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'message', type: 'string', example: 'Successfully logged out'),
-                    ],
-                    type: 'object',
-                ),
-            ),
-            new OA\Response(
-                response: 401,
-                description: 'Пользователь не авторизован',
-                content: new OA\JsonContent(ref: '#/components/schemas/AuthError'),
-            ),
+            new OA\Response(response: 204, description: 'Token revoked'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
         ],
     )]
-    public function actionLogout(): array
+    public function actionLogout(): null
     {
-        $token = $this->bearerToken();
-
-        if ($token !== null) {
-            try {
-                User::revokeAccessToken($token);
-            } catch (Throwable) {
-            }
+        try {
+            $this->authService->logout($this->bearerToken());
+        } catch (AuthenticationException $exception) {
+            throw new UnauthorizedHttpException($exception->getMessage(), 0, $exception);
         }
 
-        return ['message' => 'Successfully logged out'];
+        Yii::$app->response->statusCode = 204;
+
+        return null;
     }
 }

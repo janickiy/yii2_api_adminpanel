@@ -2,13 +2,44 @@ parameters:
     level: 5
 
     paths:
+        - application
         - backend
         - common
         - console
+        - domain
         - frontend
+        - infrastructure
+        - tests
 
     excludePaths:
         - common/config/__autocomplete.php
+        - backend/views/*
+        - frontend/views/*
+        - tests/Support/_generated/*
+        - tests/Support/*Tester.php
+
+    ignoreErrors:
+        # Yii relations remain covariant at runtime, while ActiveQuery's generic
+        # template is invariant in the PHPStan model.
+        -
+            identifier: method.childReturnType
+            paths:
+                - common/models/Catalog.php
+                - common/models/Notes.php
+                - common/models/User.php
+        # These guards deliberately validate values returned by generic mappers
+        # and Yii's service locator at runtime.
+        -
+            identifier: instanceof.alwaysTrue
+            paths:
+                - common/models/User.php
+                - infrastructure/persistence/mappers/*
+                - infrastructure/persistence/repositories/*
+        # The in-memory test repository is pure internally but implements an
+        # intentionally impure persistence contract.
+        -
+            identifier: impureMethod.pure
+            path: tests/Unit/AuthServiceTest.php
 
     scanFiles:
         - tests/Support/MailerBootstrap.php

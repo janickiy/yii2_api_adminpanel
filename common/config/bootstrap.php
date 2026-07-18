@@ -11,3 +11,6 @@ Yii::setAlias('@backend', $root . '/backend');
 Yii::setAlias('@api', $root . '/frontend/modules/api');
 Yii::setAlias('@console', $root . '/console');
 Yii::setAlias('@tests', $root . '/tests');
+Yii::setAlias('@application', $root . '/application');
+Yii::setAlias('@domain', $root . '/domain');
+Yii::setAlias('@infrastructure', $root . '/infrastructure');

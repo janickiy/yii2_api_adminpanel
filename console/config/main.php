@@ -15,6 +15,14 @@ $config = [
                 [
                     'class' => \yii\log\FileTarget::class,
                     'levels' => ['error', 'warning'],
+                    'logVars' => [],
+                ],
+                [
+                    'class' => \yii\log\FileTarget::class,
+                    'levels' => ['info', 'warning', 'error'],
+                    'categories' => ['application*'],
+                    'logFile' => '@console/runtime/logs/events.log',
+                    'logVars' => [],
                 ],
             ],
         ],

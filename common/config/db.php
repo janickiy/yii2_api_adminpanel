@@ -1,19 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'class' => \yii\db\Connection::class,
     'dsn' => sprintf(
-        'mysql:host=%s;port=%s;dbname=%s',
-        env('DB_HOST', 'mysql_db'),
-        env('DB_PORT', '3306'),
-        env('DB_DATABASE', 'yii2_db')
+        'pgsql:host=%s;port=%d;dbname=%s',
+        (string) env('DB_HOST', 'postgres'),
+        (int) env('DB_PORT', 5432),
+        (string) env('DB_DATABASE', 'notes'),
     ),
-    'username' => env('DB_USERNAME', 'root'),
-    'password' => env('DB_PASSWORD', 'root_password'),
-    'charset' => 'utf8mb4',
-
-    // Schema cache options (for production environment)
-    //'enableSchemaCache' => true,
-    //'schemaCacheDuration' => 60,
-    //'schemaCache' => 'cache',
+    'username' => (string) env('DB_USERNAME', 'notes'),
+    'password' => (string) env('DB_PASSWORD', 'notes'),
+    'charset' => 'utf8',
+    'enableSchemaCache' => (bool) env('DB_SCHEMA_CACHE', false),
+    'schemaCacheDuration' => 3600,
+    'schemaCache' => 'cache',
 ];
