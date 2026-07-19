@@ -18,39 +18,4 @@ final readonly class Note
         public ?DateTimeImmutable $updatedAt = null,
     ) {
     }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function getUserId(): int
-    {
-        return $this->userId;
-    }
-
-    public function getCategoryId(): int
-    {
-        return $this->categoryId;
-    }
-
-    public function getTitle(): string
-    {
-        return $this->title;
-    }
-
-    public function getContent(): string
-    {
-        return $this->content;
-    }
-
-    public function getCreatedAt(): ?DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function getUpdatedAt(): ?DateTimeImmutable
-    {
-        return $this->updatedAt;
-    }
 }

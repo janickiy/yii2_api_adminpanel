@@ -50,9 +50,9 @@ final readonly class ActiveRecordUserRepository implements UserRepositoryInterfa
     {
         try {
             $data = $this->mapper->toArray($user);
-            $record = $user->getId() === null
+            $record = $user->id === null
                 ? new UserRecord()
-                : UserRecord::findOne(['id' => $user->getId()]);
+                : UserRecord::findOne(['id' => $user->id]);
 
             if (!$record instanceof UserRecord) {
                 throw new PersistenceException('Cannot update a user that does not exist.');
@@ -85,13 +85,7 @@ final readonly class ActiveRecordUserRepository implements UserRepositoryInterfa
      */
     private function map(array $data): User
     {
-        $entity = $this->mapper->fromArray($data);
-
-        if (!$entity instanceof User) {
-            throw new PersistenceException('The user mapper returned an unexpected entity type.');
-        }
-
-        return $entity;
+        return $this->mapper->fromArray($data);
     }
 
     private function failure(string $message, Throwable $exception): PersistenceException

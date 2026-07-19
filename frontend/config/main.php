@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use frontend\services\FeedbackService;
+
 $params = require __DIR__ . '/params.php';
 $cookieValidationKey = app_secret(
     'FRONTEND_COOKIE_VALIDATION_KEY or COOKIE_VALIDATION_KEY',
@@ -18,6 +20,11 @@ $config = [
     'id' => 'yii2-api-adminpanel-frontend',
     'basePath' => dirname(__DIR__),
     'controllerNamespace' => 'frontend\controllers',
+    'container' => [
+        'singletons' => [
+            FeedbackService::class => FeedbackService::class,
+        ],
+    ],
     'bootstrap' => ['log'],
     'modules' => [
         'api' => [

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /** @var yii\web\View $this */
-/** @var common\models\forms\AdminForm $model */
+/** @var backend\forms\AdminForm $model */
 /** @var array<string, string> $roles */
 /** @var string $title */
 

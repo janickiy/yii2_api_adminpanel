@@ -7,7 +7,7 @@
 - регистрация, вход и отзыв JWT через REST API;
 - CRUD только собственных заметок пользователя с обязательной категорией;
 - фильтрация заметок по категории и пагинация;
-- единый JSON-формат ошибок и валидация входных DTO;
+- единый JSON-формат ошибок и валидация HTTP input models;
 - публичная форма обратной связи без авторизации;
 - AdminLTE 4: заметки, категории, сообщения, пользователи и администраторы;
 - роли админки `admin` и `moderator`;
@@ -216,17 +216,17 @@ unset API_PASSWORD TOKEN
 Бизнес-часть не зависит от HTTP-контроллеров и ActiveRecord:
 
 ```text
-application/      DTO, сценарии AuthService, NoteService, CategoryService
+application/      чистые readonly DTO и сценарии AuthService, NoteService, CategoryService
 domain/           сущности, исключения, контракты репозиториев и DataMapper
 infrastructure/   ActiveRecord, DataMapper, Repository, JWT, password hashing, logger
-frontend/         публичный HTTP-слой и REST-модуль frontend/modules/api
-backend/          HTTP-слой админ-панели AdminLTE 4
+frontend/         формы, HTTP input models, API handlers и тонкие REST-контроллеры
+backend/          формы, use-case services и тонкие контроллеры AdminLTE 4
 common/           Yii Identity/AR-адаптеры и общая конфигурация
 console/          команды и PostgreSQL-миграции
 tests/            unit- и API integration-тесты
 ```
 
-Контроллеры загружают и валидируют DTO, после чего вызывают application-сервисы. Сервисы работают с доменными сущностями через `UserRepositoryInterface`, `NoteRepositoryInterface` и `CategoryRepositoryInterface`. Реализации в `infrastructure/persistence` преобразуют ActiveRecord-записи в доменные сущности через DataMapper. Привязки сервисов, репозиториев, мапперов, JWT и кэша находятся в `common/config/container.php` и разрешаются DI-контейнером Yii2.
+REST-контроллеры делегируют запрос handlers. HTTP input models валидируют внешние `snake_case`-поля и преобразуют их в типизированные application DTO; application-слой не зависит от Yii. Сервисы работают с доменными сущностями через `UserRepositoryInterface`, `NoteRepositoryInterface` и `CategoryRepositoryInterface`. Реализации в `infrastructure/persistence` преобразуют канонические ActiveRecord-записи `UserRecord`, `NoteRecord` и `CategoryRecord` в доменные сущности через DataMapper. Backoffice-контроллеры делегируют изменение данных узким management-сервисам. Привязки сервисов, репозиториев, мапперов, JWT и кэша находятся в конфигурации DI-контейнера Yii2.
 
 ## Кэширование
 
@@ -281,10 +281,9 @@ docker compose exec -T app composer test
 ```bash
 docker compose exec -T app composer cs
 docker compose exec -T app composer static
-docker compose exec -T app composer swagger
 ```
 
-`composer swagger` генерирует JSON по PHP-атрибутам в `frontend/runtime/openapi.json`. Swagger UI приложения использует версионируемую спецификацию `frontend/modules/api/openapi/openapi.yaml`, доступную по `/docs`.
+Swagger UI использует единственный версионируемый источник спецификации — `frontend/modules/api/openapi/openapi.yaml`, доступный по `/docs`.
 
 ## Хранение данных Docker
 

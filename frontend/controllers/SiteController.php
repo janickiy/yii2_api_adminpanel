@@ -5,14 +5,25 @@ declare(strict_types=1);
 namespace frontend\controllers;
 
 use common\filters\PublicRateLimitFilter;
-use common\models\forms\FeedbackForm;
+use frontend\forms\FeedbackForm;
+use frontend\services\FeedbackService;
 use Yii;
+use yii\base\Module;
 use yii\base\UserException;
 use yii\web\Controller;
 use yii\web\Response;
 
-class SiteController extends Controller
+final class SiteController extends Controller
 {
+    public function __construct(
+        string $id,
+        Module $module,
+        private readonly FeedbackService $feedback,
+        array $config = [],
+    ) {
+        parent::__construct($id, $module, $config);
+    }
+
     public function behaviors(): array
     {
         return [
@@ -33,10 +44,7 @@ class SiteController extends Controller
         if (Yii::$app->request->isPost) {
             $feedbackForm->load(Yii::$app->request->post());
 
-            if ($feedbackForm->save()) {
-                Yii::info([
-                    'event' => 'feedback.created',
-                ], 'application.feedback');
+            if ($this->feedback->submit($feedbackForm)) {
                 Yii::$app->session->setFlash('success', 'Спасибо! Ваше сообщение отправлено.');
 
                 return $this->refresh();

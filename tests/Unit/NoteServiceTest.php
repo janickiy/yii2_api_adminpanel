@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace tests\Unit;
 
 use DateTimeImmutable;
-use application\dto\note\CreateNoteDto;
 use application\dto\note\NoteQueryDto;
-use application\dto\note\UpdateNoteDto;
+use application\dto\note\NoteWriteDto;
 use application\services\NoteService;
 use domain\entities\Category;
 use domain\entities\Note;
@@ -15,6 +14,7 @@ use domain\exceptions\NotFoundException;
 use domain\repositories\CategoryRepositoryInterface;
 use domain\repositories\NoteRepositoryInterface;
 use domain\services\EventLoggerInterface;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 final class NoteServiceTest extends TestCase
@@ -27,7 +27,7 @@ final class NoteServiceTest extends TestCase
             new Category(2, 'Personal'),
         ]);
 
-        $created = $service->create(10, $this->createDto(1, '  First note  ', '  Initial content  '));
+        $created = $service->create(10, $this->writeDto(1, 'First note', 'Initial content'));
 
         self::assertSame(1, $created->id);
         self::assertSame(10, $created->userId);
@@ -39,7 +39,7 @@ final class NoteServiceTest extends TestCase
         $updated = $service->update(
             10,
             (int) $created->id,
-            $this->updateDto(2, 'Updated note', 'Updated content'),
+            $this->writeDto(2, 'Updated note', 'Updated content'),
         );
 
         self::assertSame($created->id, $updated->id);
@@ -68,7 +68,7 @@ final class NoteServiceTest extends TestCase
     {
         $notes = new NoteTestRepository();
         $service = $this->service($notes, [new Category(1, 'Work')]);
-        $dto = $this->createDto(999, 'Unknown category', 'Must not be persisted.');
+        $dto = $this->writeDto(999, 'Unknown category', 'Must not be persisted.');
 
         try {
             $service->create(10, $dto);
@@ -105,6 +105,23 @@ final class NoteServiceTest extends TestCase
         ));
     }
 
+    public function testWriteCommandNormalizesTextOutsideHttp(): void
+    {
+        $service = $this->service(new NoteTestRepository(), [new Category(1, 'Work')]);
+
+        $note = $service->create(10, $this->writeDto(1, '  Title  ', '  Content  '));
+
+        self::assertSame('Title', $note->title);
+        self::assertSame('Content', $note->content);
+    }
+
+    public function testWriteCommandRejectsWhitespaceOnlyContent(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->writeDto(1, 'Title', '   ');
+    }
+
     /**
      * @param list<Category> $categories
      */
@@ -117,43 +134,18 @@ final class NoteServiceTest extends TestCase
         );
     }
 
-    private function createDto(int $categoryId, string $title, string $content): CreateNoteDto
+    private function writeDto(int $categoryId, string $title, string $content): NoteWriteDto
     {
-        $dto = new CreateNoteDto();
-        self::assertTrue($dto->load([
-            'category_id' => $categoryId,
-            'title' => $title,
-            'content' => $content,
-        ]));
-        self::assertTrue($dto->validate(), json_encode($dto->getErrors(), JSON_THROW_ON_ERROR));
-
-        return $dto;
-    }
-
-    private function updateDto(int $categoryId, string $title, string $content): UpdateNoteDto
-    {
-        $dto = new UpdateNoteDto();
-        self::assertTrue($dto->load([
-            'category_id' => $categoryId,
-            'title' => $title,
-            'content' => $content,
-        ]));
-        self::assertTrue($dto->validate(), json_encode($dto->getErrors(), JSON_THROW_ON_ERROR));
-
-        return $dto;
+        return new NoteWriteDto($categoryId, $title, $content);
     }
 
     private function queryDto(mixed $categoryId, mixed $page, mixed $perPage): NoteQueryDto
     {
-        $dto = new NoteQueryDto();
-        self::assertTrue($dto->load([
-            'category_id' => $categoryId,
-            'page' => $page,
-            'per_page' => $perPage,
-        ]));
-        self::assertTrue($dto->validate(), json_encode($dto->getErrors(), JSON_THROW_ON_ERROR));
-
-        return $dto;
+        return new NoteQueryDto(
+            categoryId: $categoryId === null ? null : (int) $categoryId,
+            page: (int) $page,
+            perPage: (int) $perPage,
+        );
     }
 }
 

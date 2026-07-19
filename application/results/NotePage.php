@@ -18,27 +18,4 @@ final readonly class NotePage
         public int $perPage,
     ) {
     }
-
-    /**
-     * @return list<Note>
-     */
-    public function getItems(): array
-    {
-        return $this->items;
-    }
-
-    public function getTotal(): int
-    {
-        return $this->total;
-    }
-
-    public function getPage(): int
-    {
-        return $this->page;
-    }
-
-    public function getPerPage(): int
-    {
-        return $this->perPage;
-    }
 }

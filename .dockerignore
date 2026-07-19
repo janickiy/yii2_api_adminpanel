@@ -11,5 +11,3 @@ frontend/web/assets
 console/runtime
 docker/postgres/data
 docker/redis/data
-tests/_output
-tests/Support/output

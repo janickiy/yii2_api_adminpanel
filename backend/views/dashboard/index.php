@@ -13,7 +13,7 @@ $this->params['title'] = $title;
 
 $cards = [
     ['Заметки', $counts['notes'], 'bi-journal-text', ['/notes/index'], 'primary'],
-    ['Категории', $counts['categories'], 'bi-tags', ['/catalog/index'], 'success'],
+    ['Категории', $counts['categories'], 'bi-tags', ['/category/index'], 'success'],
     ['Новые сообщения', $counts['newMessages'], 'bi-envelope', ['/messages/index'], 'warning'],
 ];
 if ($counts['users'] !== null) {

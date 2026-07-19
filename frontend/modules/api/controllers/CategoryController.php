@@ -4,20 +4,16 @@ declare(strict_types=1);
 
 namespace frontend\modules\api\controllers;
 
-use application\services\CategoryService;
-use frontend\modules\api\presenters\ApiPresenter;
-use OpenApi\Attributes as OA;
-use Yii;
+use frontend\modules\api\handlers\CategoryRequestHandler;
 use yii\base\Module;
-use yii\filters\auth\HttpBearerAuth;
 use yii\filters\VerbFilter;
 
-final class CategoryController extends BaseApiController
+final class CategoryController extends AuthenticatedApiController
 {
     public function __construct(
         string $id,
         Module $module,
-        private readonly CategoryService $categoryService,
+        private readonly CategoryRequestHandler $handler,
         array $config = [],
     ) {
         parent::__construct($id, $module, $config);
@@ -30,25 +26,12 @@ final class CategoryController extends BaseApiController
             'class' => VerbFilter::class,
             'actions' => ['index' => ['GET']],
         ];
-        $behaviors['authenticator'] = [
-            'class' => HttpBearerAuth::class,
-            'user' => Yii::$app->get('apiUser'),
-        ];
 
-        return $behaviors;
+        return $this->withBearerAuthentication($behaviors);
     }
 
-    #[OA\Get(
-        path: '/api/v1/categories',
-        operationId: 'listCategories',
-        security: [['bearerAuth' => []]],
-        tags: ['Categories'],
-        responses: [new OA\Response(response: 200, description: 'Categories')],
-    )]
     public function actionIndex(): array
     {
-        return [
-            'data' => array_map(ApiPresenter::category(...), $this->categoryService->list()),
-        ];
+        return $this->handler->index();
     }
 }

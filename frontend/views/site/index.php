@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** @var yii\web\View $this */
 /** @var string $apiUrl */
-/** @var common\models\forms\FeedbackForm $feedbackForm */
+/** @var frontend\forms\FeedbackForm $feedbackForm */
 
 use yii\bootstrap5\ActiveForm;
 use yii\helpers\Html;

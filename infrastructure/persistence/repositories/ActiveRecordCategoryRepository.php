@@ -11,14 +11,8 @@ use domain\repositories\CategoryRepositoryInterface;
 use infrastructure\persistence\records\CategoryRecord;
 use Throwable;
 
-/**
- * @phpstan-type CategoryMapper CategoryDataMapperInterface
- */
 final readonly class ActiveRecordCategoryRepository implements CategoryRepositoryInterface
 {
-    /**
-     * @param CategoryDataMapperInterface $mapper
-     */
     public function __construct(
         private CategoryDataMapperInterface $mapper,
     ) {
@@ -57,13 +51,7 @@ final readonly class ActiveRecordCategoryRepository implements CategoryRepositor
      */
     private function map(array $data): Category
     {
-        $entity = $this->mapper->fromArray($data);
-
-        if (!$entity instanceof Category) {
-            throw new PersistenceException('The category mapper returned an unexpected entity type.');
-        }
-
-        return $entity;
+        return $this->mapper->fromArray($data);
     }
 
     private function failure(string $message, Throwable $exception): PersistenceException

@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+use backend\services\AdminManagementService;
+use backend\services\CategoryManagementService;
+use backend\services\DashboardMetricsService;
+use backend\services\MessageManagementService;
+use backend\services\NoteManagementService;
+use backend\services\RecordDeleter;
+use backend\services\UserManagementService;
+
 $params = require __DIR__ . '/params.php';
 $cookieValidationKey = app_secret(
     'BACKEND_COOKIE_VALIDATION_KEY or COOKIE_VALIDATION_KEY',
@@ -18,6 +26,17 @@ $config = [
     'id' => 'yii2-api-adminpanel-backend',
     'basePath' => dirname(__DIR__),
     'controllerNamespace' => 'backend\controllers',
+    'container' => [
+        'singletons' => [
+            AdminManagementService::class => AdminManagementService::class,
+            CategoryManagementService::class => CategoryManagementService::class,
+            DashboardMetricsService::class => DashboardMetricsService::class,
+            MessageManagementService::class => MessageManagementService::class,
+            NoteManagementService::class => NoteManagementService::class,
+            RecordDeleter::class => RecordDeleter::class,
+            UserManagementService::class => UserManagementService::class,
+        ],
+    ],
     'bootstrap' => ['log'],
     'components' => [
         'request' => [
@@ -81,50 +100,30 @@ $config = [
                 'PUT,PATCH cp/admins/<id:\d+>' => 'admin/update',
                 'DELETE cp/admins/<id:\d+>' => 'admin/destroy',
 
-                'GET cp/admin' => 'admin/index',
-                'GET cp/admin/create' => 'admin/create',
-                'POST cp/admin/store' => 'admin/store',
-                'GET cp/admin/edit/<id:\d+>' => 'admin/edit',
-                'PUT cp/admin/update' => 'admin/update',
-                'POST cp/admin/update' => 'admin/update',
-                'DELETE cp/admin/destroy/<id:\d+>' => 'admin/destroy',
-
                 'GET cp/users' => 'users/index',
                 'GET cp/users/create' => 'users/create',
                 'POST cp/users' => 'users/store',
                 'GET cp/users/<id:\d+>/edit' => 'users/edit',
                 'PUT,PATCH cp/users/<id:\d+>' => 'users/update',
-                'POST cp/users/update' => 'users/update',
                 'DELETE cp/users/<id:\d+>' => 'users/destroy',
 
-                'GET cp/categories' => 'catalog/index',
-                'GET cp/categories/create' => 'catalog/create',
-                'POST cp/categories' => 'catalog/store',
-                'GET cp/categories/<id:\d+>/edit' => 'catalog/edit',
-                'PUT,PATCH cp/categories/<id:\d+>' => 'catalog/update',
-                'DELETE cp/categories/<id:\d+>' => 'catalog/destroy',
-                'GET cp/catalog' => 'catalog/index',
-                'GET cp/catalog/create' => 'catalog/create',
-                'POST cp/catalog/store' => 'catalog/store',
-                'GET cp/catalog/edit/<id:\d+>' => 'catalog/edit',
-                'PUT cp/catalog/update' => 'catalog/update',
-                'POST cp/catalog/update' => 'catalog/update',
-                'DELETE cp/catalog/destroy/<id:\d+>' => 'catalog/destroy',
+                'GET cp/categories' => 'category/index',
+                'GET cp/categories/create' => 'category/create',
+                'POST cp/categories' => 'category/store',
+                'GET cp/categories/<id:\d+>/edit' => 'category/edit',
+                'PUT,PATCH cp/categories/<id:\d+>' => 'category/update',
+                'DELETE cp/categories/<id:\d+>' => 'category/destroy',
 
                 'GET cp/notes' => 'notes/index',
-                'GET cp/notes/edit/<id:\d+>' => 'notes/edit',
-                'PUT cp/notes/update' => 'notes/update',
-                'POST cp/notes/update' => 'notes/update',
-                'DELETE cp/notes/destroy/<id:\d+>' => 'notes/destroy',
+                'GET cp/notes/<id:\d+>/edit' => 'notes/edit',
+                'PUT,PATCH cp/notes/<id:\d+>' => 'notes/update',
+                'DELETE cp/notes/<id:\d+>' => 'notes/destroy',
 
                 'GET cp/messages' => 'messages/index',
                 'GET cp/messages/<id:\d+>' => 'messages/view',
                 'POST cp/messages/<id:\d+>/status' => 'messages/status',
                 'DELETE cp/messages/<id:\d+>' => 'messages/destroy',
 
-                'GET cp/datatable/notes' => 'datatable/notes',
-                'GET cp/datatable/admin' => 'datatable/admin',
-                'GET cp/datatable/catalogs' => 'datatable/catalogs',
             ],
         ],
     ],

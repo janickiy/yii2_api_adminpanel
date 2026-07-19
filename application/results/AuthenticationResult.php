@@ -13,14 +13,4 @@ final readonly class AuthenticationResult
         public string $token,
     ) {
     }
-
-    public function getUser(): User
-    {
-        return $this->user;
-    }
-
-    public function getToken(): string
-    {
-        return $this->token;
-    }
 }

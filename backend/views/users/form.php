@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /** @var yii\web\View $this */
-/** @var common\models\forms\UserForm $model */
+/** @var backend\forms\UserForm $model */
 /** @var string $title */
 
 use yii\helpers\Html;

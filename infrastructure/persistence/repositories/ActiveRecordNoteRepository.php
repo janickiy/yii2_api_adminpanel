@@ -10,6 +10,7 @@ use domain\exceptions\PersistenceException;
 use domain\mappers\NoteDataMapperInterface;
 use domain\repositories\NoteRepositoryInterface;
 use domain\services\EventLoggerInterface;
+use infrastructure\caching\NoteCacheTags;
 use infrastructure\persistence\records\NoteRecord;
 use InvalidArgumentException;
 use Throwable;
@@ -18,8 +19,6 @@ use yii\caching\TagDependency;
 
 final readonly class ActiveRecordNoteRepository implements NoteRepositoryInterface
 {
-    private const CACHE_NAMESPACE = 'notes:v1';
-
     public function __construct(
         private NoteDataMapperInterface $mapper,
         private CacheInterface $cache,
@@ -33,13 +32,13 @@ final readonly class ActiveRecordNoteRepository implements NoteRepositoryInterfa
 
     public function findOwnedById(int $id, int $userId): ?Note
     {
-        $key = [self::CACHE_NAMESPACE, 'item', 'user', $userId, 'note', $id];
+        $key = [NoteCacheTags::NAMESPACE, 'item', 'user', $userId, 'note', $id];
 
         try {
             $result = $this->remember(
                 $key,
                 fn (): ?Note => $this->loadOwnedById($id, $userId),
-                [$this->userTag($userId)],
+                [NoteCacheTags::user($userId)],
                 static fn (mixed $value): bool => $value === null || $value instanceof Note,
             );
 
@@ -60,7 +59,7 @@ final readonly class ActiveRecordNoteRepository implements NoteRepositoryInterfa
         $this->assertPagination($limit, $offset);
         $categoryKey = $categoryId ?? 'all';
         $key = [
-            self::CACHE_NAMESPACE,
+            NoteCacheTags::NAMESPACE,
             'list',
             'user',
             $userId,
@@ -98,7 +97,7 @@ final readonly class ActiveRecordNoteRepository implements NoteRepositoryInterfa
     {
         $categoryKey = $categoryId ?? 'all';
         $key = [
-            self::CACHE_NAMESPACE,
+            NoteCacheTags::NAMESPACE,
             'count',
             'user',
             $userId,
@@ -130,11 +129,11 @@ final readonly class ActiveRecordNoteRepository implements NoteRepositoryInterfa
     {
         try {
             $data = $this->mapper->toArray($note);
-            $record = $note->getId() === null
+            $record = $note->id === null
                 ? new NoteRecord()
                 : NoteRecord::findOne([
-                    'id' => $note->getId(),
-                    'user_id' => $note->getUserId(),
+                    'id' => $note->id,
+                    'user_id' => $note->userId,
                 ]);
 
             if (!$record instanceof NoteRecord) {
@@ -161,8 +160,8 @@ final readonly class ActiveRecordNoteRepository implements NoteRepositoryInterfa
 
             $saved = $this->map($record->getAttributes());
             $this->invalidateAfterWrite(
-                $saved->getUserId(),
-                $saved->getCategoryId(),
+                $saved->userId,
+                $saved->categoryId,
                 $oldUserId,
                 $oldCategoryId,
             );
@@ -177,7 +176,7 @@ final readonly class ActiveRecordNoteRepository implements NoteRepositoryInterfa
 
     public function delete(Note $note): void
     {
-        $id = $note->getId();
+        $id = $note->id;
         if ($id === null) {
             throw new PersistenceException('Cannot delete a note without an id.');
         }
@@ -185,7 +184,7 @@ final readonly class ActiveRecordNoteRepository implements NoteRepositoryInterfa
         try {
             $record = NoteRecord::findOne([
                 'id' => $id,
-                'user_id' => $note->getUserId(),
+                'user_id' => $note->userId,
             ]);
 
             if (!$record instanceof NoteRecord) {
@@ -197,7 +196,7 @@ final readonly class ActiveRecordNoteRepository implements NoteRepositoryInterfa
                 throw new PersistenceException('The note could not be deleted.');
             }
 
-            $this->invalidateAfterWrite($note->getUserId(), $categoryId);
+            $this->invalidateAfterWrite($note->userId, $categoryId);
         } catch (PersistenceException $exception) {
             throw $exception;
         } catch (Throwable $exception) {
@@ -301,10 +300,10 @@ final readonly class ActiveRecordNoteRepository implements NoteRepositoryInterfa
     ): void {
         $tags = $this->queryTags($userId, $categoryId);
         if ($oldUserId !== null) {
-            $tags[] = $this->userTag($oldUserId);
+            $tags[] = NoteCacheTags::user($oldUserId);
         }
         if ($oldCategoryId !== null) {
-            $tags[] = $this->categoryTag($oldUserId ?? $userId, $oldCategoryId);
+            $tags[] = NoteCacheTags::category($oldUserId ?? $userId, $oldCategoryId);
         }
 
         try {
@@ -319,27 +318,12 @@ final readonly class ActiveRecordNoteRepository implements NoteRepositoryInterfa
      */
     private function queryTags(int $userId, ?int $categoryId): array
     {
-        $tags = [$this->userTag($userId)];
+        $tags = [NoteCacheTags::user($userId)];
         if ($categoryId !== null) {
-            $tags[] = $this->categoryTag($userId, $categoryId);
+            $tags[] = NoteCacheTags::category($userId, $categoryId);
         }
 
         return $tags;
-    }
-
-    private function userTag(int $userId): string
-    {
-        return sprintf('%s:user:%d', self::CACHE_NAMESPACE, $userId);
-    }
-
-    private function categoryTag(int $userId, int $categoryId): string
-    {
-        return sprintf(
-            '%s:user:%d:category:%d',
-            self::CACHE_NAMESPACE,
-            $userId,
-            $categoryId,
-        );
     }
 
     /**
@@ -347,13 +331,7 @@ final readonly class ActiveRecordNoteRepository implements NoteRepositoryInterfa
      */
     private function map(array $data): Note
     {
-        $entity = $this->mapper->fromArray($data);
-
-        if (!$entity instanceof Note) {
-            throw new PersistenceException('The note mapper returned an unexpected entity type.');
-        }
-
-        return $entity;
+        return $this->mapper->fromArray($data);
     }
 
     private function assertPagination(int $limit, int $offset): void

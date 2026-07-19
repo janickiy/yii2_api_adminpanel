@@ -4,16 +4,27 @@ declare(strict_types=1);
 
 namespace backend\controllers;
 
+use backend\forms\AdminForm;
+use backend\services\AdminManagementService;
 use common\models\Admin;
-use common\models\forms\AdminForm;
+use domain\exceptions\PersistenceException;
 use Yii;
+use yii\base\Module;
 use yii\data\ActiveDataProvider;
-use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
-class AdminController extends BaseWebController
+final class AdminController extends BaseWebController
 {
     protected string $permissions = Admin::ROLE_ADMIN;
+
+    public function __construct(
+        string $id,
+        Module $module,
+        private readonly AdminManagementService $admins,
+        array $config = [],
+    ) {
+        parent::__construct($id, $module, $config);
+    }
 
     public function actionIndex(): string
     {
@@ -31,11 +42,7 @@ class AdminController extends BaseWebController
         $model = new AdminForm(['scenario' => AdminForm::SCENARIO_CREATE]);
         $model->role = Admin::ROLE_ADMIN;
 
-        return $this->render('form', [
-            'title' => 'Добавить администратора',
-            'model' => $model,
-            'roles' => Admin::roleLabels(),
-        ]);
+        return $this->renderForm('Добавить администратора', $model);
     }
 
     public function actionStore(): Response|string
@@ -43,31 +50,10 @@ class AdminController extends BaseWebController
         $model = new AdminForm(['scenario' => AdminForm::SCENARIO_CREATE]);
         $model->load(Yii::$app->request->post());
 
-        if (!$model->validate()) {
-            return $this->render('form', [
-                'title' => 'Добавить администратора',
-                'model' => $model,
-                'roles' => Admin::roleLabels(),
-            ]);
+        if (!$model->validate() || !$this->admins->create($model)) {
+            return $this->renderForm('Добавить администратора', $model);
         }
 
-        $admin = new Admin([
-            'login' => $model->login,
-            'name' => $model->name,
-            'role' => $model->role,
-        ]);
-        $admin->setPassword((string) $model->password);
-        if (!$admin->save()) {
-            $this->copyErrors($admin, $model);
-
-            return $this->render('form', [
-                'title' => 'Добавить администратора',
-                'model' => $model,
-                'roles' => Admin::roleLabels(),
-            ]);
-        }
-
-        Yii::info(['event' => 'admin.created', 'admin_id' => (int) $admin->id], 'application.admin');
         Yii::$app->session->setFlash('success', 'Администратор создан.');
 
         return $this->redirect(['/admin/index']);
@@ -75,58 +61,33 @@ class AdminController extends BaseWebController
 
     public function actionEdit(int $id): string
     {
-        $admin = $this->findModel($id);
+        $admin = $this->findRecord(Admin::class, $id);
         $model = new AdminForm(['scenario' => AdminForm::SCENARIO_UPDATE]);
         $model->loadFromAdmin($admin);
 
-        return $this->render('form', [
-            'title' => 'Редактировать администратора',
-            'model' => $model,
-            'roles' => Admin::roleLabels(),
-            'adminRecord' => $admin,
-        ]);
+        return $this->renderForm('Редактировать администратора', $model);
     }
 
-    public function actionUpdate(?int $id = null): Response|string
+    public function actionUpdate(int $id): Response|string
     {
         $model = new AdminForm(['scenario' => AdminForm::SCENARIO_UPDATE]);
         $model->load(Yii::$app->request->post());
-        if ($id !== null) {
-            $model->id = $id;
-        }
-        $admin = $this->findModel((int) $model->id);
+        $model->id = $id;
+        $admin = $this->findRecord(Admin::class, (int) $model->id);
 
         if (!$model->validate()) {
-            return $this->render('form', [
-                'title' => 'Редактировать администратора',
-                'model' => $model,
-                'roles' => Admin::roleLabels(),
-                'adminRecord' => $admin,
-            ]);
+            return $this->renderForm('Редактировать администратора', $model);
         }
 
-        $admin->login = (string) $model->login;
-        $admin->name = $model->name;
-
-        if ((int) $admin->id !== (int) Yii::$app->user->id && $model->role !== null) {
-            $admin->role = $model->role;
+        $updated = $this->admins->update(
+            $admin,
+            $model,
+            (int) Yii::$app->user->id,
+        );
+        if (!$updated) {
+            return $this->renderForm('Редактировать администратора', $model);
         }
 
-        if ($model->password !== null && $model->password !== '') {
-            $admin->setPassword($model->password);
-        }
-
-        if (!$admin->save()) {
-            $this->copyErrors($admin, $model);
-
-            return $this->render('form', [
-                'title' => 'Редактировать администратора',
-                'model' => $model,
-                'roles' => Admin::roleLabels(),
-                'adminRecord' => $admin,
-            ]);
-        }
-        Yii::info(['event' => 'admin.updated', 'admin_id' => (int) $admin->id], 'application.admin');
         Yii::$app->session->setFlash('success', 'Данные администратора обновлены.');
 
         return $this->redirect(['/admin/index']);
@@ -134,41 +95,30 @@ class AdminController extends BaseWebController
 
     public function actionDestroy(int $id): Response|array
     {
-        if ($id === (int) Yii::$app->user->id) {
-            if (Yii::$app->request->isAjax) {
-                Yii::$app->response->format = Response::FORMAT_JSON;
-                Yii::$app->response->statusCode = 403;
+        $admin = $this->findRecord(Admin::class, $id);
 
-                return ['message' => 'Нельзя удалить текущего администратора.'];
-            }
-
-            Yii::$app->session->setFlash('error', 'Нельзя удалить текущего администратора.');
-
-            return $this->redirect(['/admin/index']);
+        try {
+            $deleted = $this->admins->delete($admin, (int) Yii::$app->user->id);
+        } catch (PersistenceException $exception) {
+            $this->throwPersistenceError($exception, 'Не удалось удалить администратора.');
         }
 
-        $this->deleteRecord($this->findModel($id));
-        Yii::info(['event' => 'admin.deleted', 'admin_id' => $id], 'application.admin');
-
-        if (Yii::$app->request->isAjax) {
-            Yii::$app->response->format = Response::FORMAT_JSON;
-
-            return ['message' => 'Администратор удалён.'];
+        if (!$deleted) {
+            return $this->rejectedResponse(
+                'Нельзя удалить текущего администратора.',
+                ['/admin/index'],
+            );
         }
 
-        Yii::$app->session->setFlash('success', 'Администратор удалён.');
-
-        return $this->redirect(['/admin/index']);
+        return $this->successResponse('Администратор удалён.', ['/admin/index']);
     }
 
-    private function findModel(int $id): Admin
+    private function renderForm(string $title, AdminForm $model): string
     {
-        $model = Admin::findOne($id);
-
-        if (!$model) {
-            throw new NotFoundHttpException('Запись не найдена.');
-        }
-
-        return $model;
+        return $this->render('form', [
+            'title' => $title,
+            'model' => $model,
+            'roles' => Admin::roleLabels(),
+        ]);
     }
 }

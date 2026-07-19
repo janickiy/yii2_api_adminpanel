@@ -28,32 +28,24 @@ final readonly class AuthService
 
     public function register(RegisterUserDto $dto): User
     {
-        $email = $dto->emailValue();
+        $email = $dto->email;
 
         if ($this->users->findByEmail($email) !== null) {
-            $this->logger->warning('auth.registration_conflict', [
-                'email_hash' => hash('sha256', $email),
-            ]);
-
-            throw new ConflictException('A user with this email already exists.');
+            $this->throwRegistrationConflict($email);
         }
 
         $user = new User(
             id: null,
-            name: $dto->nameValue(),
+            name: $dto->name,
             email: $email,
-            passwordHash: $this->passwordHasher->hash($dto->passwordValue()),
+            passwordHash: $this->passwordHasher->hash($dto->password),
         );
 
         try {
             $savedUser = $this->users->save($user);
         } catch (PersistenceException $exception) {
             if ($this->users->findByEmail($email) !== null) {
-                $this->logger->warning('auth.registration_conflict', [
-                    'email_hash' => hash('sha256', $email),
-                ]);
-
-                throw new ConflictException('A user with this email already exists.', 0, $exception);
+                $this->throwRegistrationConflict($email, $exception);
             }
 
             $this->logger->warning('auth.registration_failed', [
@@ -73,10 +65,10 @@ final readonly class AuthService
 
     public function login(LoginUserDto $dto): AuthenticationResult
     {
-        $email = $dto->emailValue();
+        $email = $dto->email;
         $user = $this->users->findByEmail($email);
 
-        if ($user === null || !$this->passwordHasher->verify($dto->passwordValue(), $user->passwordHash)) {
+        if ($user === null || !$this->passwordHasher->verify($dto->password, $user->passwordHash)) {
             $this->logger->warning('auth.login_failed', [
                 'email_hash' => hash('sha256', $email),
             ]);
@@ -110,5 +102,16 @@ final readonly class AuthService
         $this->logger->info('auth.logout_succeeded', [
             'user_id' => $userId,
         ]);
+    }
+
+    private function throwRegistrationConflict(
+        string $email,
+        ?PersistenceException $previous = null,
+    ): never {
+        $this->logger->warning('auth.registration_conflict', [
+            'email_hash' => hash('sha256', $email),
+        ]);
+
+        throw new ConflictException('A user with this email already exists.', 0, $previous);
     }
 }

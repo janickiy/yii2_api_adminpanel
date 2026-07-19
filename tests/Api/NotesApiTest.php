@@ -68,24 +68,42 @@ final class NotesApiTest extends TestCase
         self::assertNotSame('', $firstToken);
         $this->issuedTokenIds[] = $this->tokenId($firstToken);
 
-        [$status] = $this->request(
+        [$status, $body] = $this->request(
             'GET',
             '/api/v1/notes?page=9223372036854775807&per_page=100',
             token: $firstToken,
         );
         self::assertSame(422, $status);
+        self::assertSame(422, $body['error']['status'] ?? null);
+        self::assertSame('Validation failed.', $body['error']['message'] ?? null);
+        self::assertArrayHasKey('page', $body['error']['fields'] ?? []);
 
         [$status, $body] = $this->request('GET', '/api/v1/categories', token: $firstToken);
         self::assertSame(200, $status, json_encode($body));
         $categoryId = (int) ($body['data'][0]['id'] ?? 0);
         self::assertGreaterThan(0, $categoryId);
 
-        [$status] = $this->request('POST', '/api/v1/notes', [
+        [$status, $body] = $this->request('POST', '/api/v1/notes', [
             'category_id' => 0,
             'title' => '',
             'content' => '',
         ], $firstToken);
         self::assertSame(422, $status);
+        self::assertSame(
+            ['status', 'message', 'fields'],
+            array_keys($body['error'] ?? []),
+        );
+
+        [$status, $body] = $this->request('POST', '/api/v1/notes', [
+            'category_id' => 2_147_483_647,
+            'title' => 'Unknown category',
+            'content' => 'This note must not be persisted.',
+        ], $firstToken);
+        self::assertSame(422, $status);
+        self::assertSame(
+            ['category_id' => ['Category not found.']],
+            $body['error']['fields'] ?? null,
+        );
 
         [$status, $body] = $this->request('POST', '/api/v1/notes', [
             'category_id' => $categoryId,

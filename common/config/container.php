@@ -24,16 +24,9 @@ use infrastructure\persistence\repositories\ActiveRecordUserRepository;
 use infrastructure\security\FirebaseJwtTokenManager;
 use infrastructure\security\YiiPasswordHasher;
 use yii\caching\CacheInterface;
-use yii\mail\MailerInterface;
-use yii\symfonymailer\Mailer;
 
 return [
     'singletons' => [
-        MailerInterface::class => [
-            'class' => Mailer::class,
-            'useFileTransport' => true,
-            'viewPath' => '@common/mail',
-        ],
         UserDataMapperInterface::class => UserDataMapper::class,
         NoteDataMapperInterface::class => NoteDataMapper::class,
         CategoryDataMapperInterface::class => CategoryDataMapper::class,

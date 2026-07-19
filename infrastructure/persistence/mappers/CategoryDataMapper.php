@@ -29,8 +29,8 @@ final class CategoryDataMapper implements CategoryDataMapperInterface
         }
 
         return [
-            'id' => $entity->getId(),
-            'name' => $entity->getName(),
+            'id' => $entity->id,
+            'name' => $entity->name,
         ];
     }
 }

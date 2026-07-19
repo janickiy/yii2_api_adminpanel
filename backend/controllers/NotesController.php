@@ -4,26 +4,36 @@ declare(strict_types=1);
 
 namespace backend\controllers;
 
+use backend\forms\NoteForm;
+use backend\services\NoteManagementService;
 use common\models\Admin;
-use common\models\Catalog;
-use common\models\forms\NoteForm;
-use common\models\Notes;
+use infrastructure\persistence\records\CategoryRecord;
+use infrastructure\persistence\records\NoteRecord;
 use Yii;
+use yii\base\Module;
 use yii\data\ActiveDataProvider;
 use yii\helpers\ArrayHelper;
-use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
-class NotesController extends BaseWebController
+final class NotesController extends BaseWebController
 {
     protected string $permissions = Admin::ROLE_ADMIN . '|' . Admin::ROLE_MODERATOR;
+
+    public function __construct(
+        string $id,
+        Module $module,
+        private readonly NoteManagementService $notes,
+        array $config = [],
+    ) {
+        parent::__construct($id, $module, $config);
+    }
 
     public function actionIndex(): string
     {
         return $this->render('index', [
             'title' => 'Заметки',
             'dataProvider' => new ActiveDataProvider([
-                'query' => Notes::find()
+                'query' => NoteRecord::find()
                     ->with(['user', 'category'])
                     ->orderBy(['id' => SORT_DESC]),
                 'pagination' => ['pageSize' => 20],
@@ -33,54 +43,32 @@ class NotesController extends BaseWebController
 
     public function actionEdit(int $id): string
     {
-        $note = $this->findModel($id);
-        $form = new NoteForm([
-            'category_id' => (int) $note->category_id,
-            'title' => $note->title,
-            'content' => $note->content,
-        ]);
-        $form->id = (int) $note->id;
+        $note = $this->findRecord(NoteRecord::class, $id);
+        $form = new NoteForm();
+        $form->loadFromNote($note);
 
-        return $this->render('form', [
-            'title' => 'Редактирование',
-            'model' => $form,
-            'categories' => $this->categoryOptions(),
-        ]);
+        return $this->renderForm($form);
     }
 
-    public function actionUpdate(?int $id = null): Response|string
+    public function actionUpdate(int $id): Response|string
     {
         $form = new NoteForm();
         $form->load(Yii::$app->request->post());
-        if ($id !== null) {
-            $form->id = $id;
-        }
-        $note = $this->findModel((int) $form->id);
+        $form->id = $id;
+        $note = $this->findRecord(NoteRecord::class, (int) $form->id);
 
         if (!$form->validate()) {
             $form->id = (int) $note->id;
 
-            return $this->render('form', [
-                'title' => 'Редактирование',
-                'model' => $form,
-                'categories' => $this->categoryOptions(),
-            ]);
+            return $this->renderForm($form);
         }
 
-        $note->category_id = (int) $form->category_id;
-        $note->title = (string) $form->title;
-        $note->content = (string) $form->content;
-        if (!$note->save()) {
-            $this->copyErrors($note, $form);
+        if (!$this->notes->update($note, $form)) {
             $form->id = (int) $note->id;
 
-            return $this->render('form', [
-                'title' => 'Редактирование',
-                'model' => $form,
-                'categories' => $this->categoryOptions(),
-            ]);
+            return $this->renderForm($form);
         }
-        Yii::info(['event' => 'note.updated.admin', 'note_id' => (int) $note->id], 'application.admin');
+
         Yii::$app->session->setFlash('success', 'Заметка обновлена.');
 
         return $this->redirect(['/notes/index']);
@@ -88,35 +76,30 @@ class NotesController extends BaseWebController
 
     public function actionDestroy(int $id): Response|array
     {
-        $this->deleteRecord($this->findModel($id));
-        Yii::info(['event' => 'note.deleted.admin', 'note_id' => $id], 'application.admin');
+        $note = $this->findRecord(NoteRecord::class, $id);
 
-        if (Yii::$app->request->isAjax) {
-            Yii::$app->response->format = Response::FORMAT_JSON;
-
-            return ['message' => 'Заметка удалена.'];
-        }
-
-        Yii::$app->session->setFlash('success', 'Заметка удалена.');
-
-        return $this->redirect(['/notes/index']);
+        return $this->deleteAndRespond(
+            function () use ($note): void {
+                $this->notes->delete($note);
+            },
+            'Заметка удалена.',
+            ['/notes/index'],
+        );
     }
 
-    private function findModel(int $id): Notes
+    private function renderForm(NoteForm $model): string
     {
-        $model = Notes::findOne($id);
-
-        if (!$model) {
-            throw new NotFoundHttpException('Запись не найдена.');
-        }
-
-        return $model;
+        return $this->render('form', [
+            'title' => 'Редактирование',
+            'model' => $model,
+            'categories' => $this->categoryOptions(),
+        ]);
     }
 
     private function categoryOptions(): array
     {
         return ArrayHelper::map(
-            Catalog::find()->orderBy(['name' => SORT_ASC])->all(),
+            CategoryRecord::find()->orderBy(['name' => SORT_ASC])->all(),
             'id',
             'name',
         );

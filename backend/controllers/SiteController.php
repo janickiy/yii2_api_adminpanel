@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace backend\controllers;
 
+use backend\forms\AdminLoginForm;
 use common\filters\PublicRateLimitFilter;
-use common\models\forms\AdminLoginForm;
 use Yii;
 use yii\base\UserException;
 use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\Response;
 
-class SiteController extends Controller
+final class SiteController extends Controller
 {
+    public $layout = 'error';
+
     public function behaviors(): array
     {
         return [

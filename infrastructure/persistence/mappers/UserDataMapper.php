@@ -33,12 +33,12 @@ final class UserDataMapper implements UserDataMapperInterface
         }
 
         return [
-            'id' => $entity->getId(),
-            'name' => $entity->getName(),
-            'email' => $entity->getEmail(),
-            'password' => $entity->getPasswordHash(),
-            'created_at' => TimestampMapper::toStorage($entity->getCreatedAt()),
-            'updated_at' => TimestampMapper::toStorage($entity->getUpdatedAt()),
+            'id' => $entity->id,
+            'name' => $entity->name,
+            'email' => $entity->email,
+            'password' => $entity->passwordHash,
+            'created_at' => TimestampMapper::toStorage($entity->createdAt),
+            'updated_at' => TimestampMapper::toStorage($entity->updatedAt),
         ];
     }
 }

@@ -6,6 +6,6 @@ namespace domain\exceptions;
 
 use RuntimeException;
 
-final class NotFoundException extends RuntimeException
+class NotFoundException extends RuntimeException
 {
 }

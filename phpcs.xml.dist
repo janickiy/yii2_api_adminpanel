@@ -22,9 +22,6 @@
     <exclude-pattern>console/config/bootstrap.php</exclude-pattern>
     <exclude-pattern>console/migrations/*</exclude-pattern>
     <exclude-pattern>frontend/config/bootstrap.php</exclude-pattern>
-    <exclude-pattern>frontend/modules/api/openapi/bootstrap.php</exclude-pattern>
-    <exclude-pattern>tests/config/*</exclude-pattern>
-
     <!-- Test doubles intentionally live beside the scenarios they support. -->
     <rule ref="PSR1.Classes.ClassDeclaration.MultipleClasses">
         <exclude-pattern>tests/Unit/AuthServiceTest.php</exclude-pattern>

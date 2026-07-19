@@ -6,12 +6,12 @@ declare(strict_types=1);
 /** @var string $title */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
-use common\models\User;
+use infrastructure\persistence\records\UserRecord;
 use yii\helpers\Html;
 
 $this->title = $title;
 $this->params['title'] = $title;
-/** @var User[] $models */
+/** @var UserRecord[] $models */
 $models = $dataProvider->getModels();
 ?>
 <div class="card">

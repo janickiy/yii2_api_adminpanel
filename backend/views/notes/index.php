@@ -6,13 +6,13 @@ declare(strict_types=1);
 /** @var string $title */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
-use common\models\Notes;
+use infrastructure\persistence\records\NoteRecord;
 use yii\helpers\Html;
 use yii\helpers\StringHelper;
 
 $this->title = $title;
 $this->params['title'] = $title;
-/** @var Notes[] $models */
+/** @var NoteRecord[] $models */
 $models = $dataProvider->getModels();
 ?>
 <div class="card">

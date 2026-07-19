@@ -8,10 +8,10 @@ use domain\entities\Category;
 use domain\entities\Note;
 use domain\entities\User;
 
-final class ApiPresenter
+final readonly class ApiPresenter
 {
     /** @return array<string, mixed> */
-    public static function user(User $user): array
+    public function user(User $user): array
     {
         return [
             'id' => $user->id,
@@ -23,7 +23,7 @@ final class ApiPresenter
     }
 
     /** @return array<string, mixed> */
-    public static function note(Note $note): array
+    public function note(Note $note): array
     {
         return [
             'id' => $note->id,
@@ -37,7 +37,7 @@ final class ApiPresenter
     }
 
     /** @return array{id: int, name: string} */
-    public static function category(Category $category): array
+    public function category(Category $category): array
     {
         return [
             'id' => $category->id,

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /** @var yii\web\View $this */
-/** @var common\models\forms\NoteForm $model */
+/** @var backend\forms\NoteForm $model */
 /** @var array<int|string, string> $categories */
 /** @var string $title */
 

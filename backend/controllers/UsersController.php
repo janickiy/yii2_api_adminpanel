@@ -4,24 +4,34 @@ declare(strict_types=1);
 
 namespace backend\controllers;
 
+use backend\forms\UserForm;
+use backend\services\UserManagementService;
 use common\models\Admin;
-use common\models\forms\UserForm;
-use common\models\User;
+use infrastructure\persistence\records\UserRecord;
 use Yii;
+use yii\base\Module;
 use yii\data\ActiveDataProvider;
-use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
 final class UsersController extends BaseWebController
 {
     protected string $permissions = Admin::ROLE_ADMIN;
 
+    public function __construct(
+        string $id,
+        Module $module,
+        private readonly UserManagementService $users,
+        array $config = [],
+    ) {
+        parent::__construct($id, $module, $config);
+    }
+
     public function actionIndex(): string
     {
         return $this->render('index', [
             'title' => 'Пользователи',
             'dataProvider' => new ActiveDataProvider([
-                'query' => User::find()->orderBy(['id' => SORT_DESC]),
+                'query' => UserRecord::find()->orderBy(['id' => SORT_DESC]),
                 'pagination' => ['pageSize' => 20],
             ]),
         ]);
@@ -29,10 +39,10 @@ final class UsersController extends BaseWebController
 
     public function actionCreate(): string
     {
-        return $this->render('form', [
-            'title' => 'Добавить пользователя',
-            'model' => new UserForm(['scenario' => UserForm::SCENARIO_CREATE]),
-        ]);
+        return $this->renderForm(
+            'Добавить пользователя',
+            new UserForm(['scenario' => UserForm::SCENARIO_CREATE]),
+        );
     }
 
     public function actionStore(): Response|string
@@ -40,28 +50,10 @@ final class UsersController extends BaseWebController
         $form = new UserForm(['scenario' => UserForm::SCENARIO_CREATE]);
         $form->load(Yii::$app->request->post());
 
-        if (!$form->validate()) {
-            return $this->render('form', [
-                'title' => 'Добавить пользователя',
-                'model' => $form,
-            ]);
+        if (!$form->validate() || !$this->users->create($form)) {
+            return $this->renderForm('Добавить пользователя', $form);
         }
 
-        $user = new User([
-            'name' => $form->name,
-            'email' => $form->email,
-        ]);
-        $user->setPassword((string) $form->password);
-        if (!$user->save()) {
-            $this->copyErrors($user, $form);
-
-            return $this->render('form', [
-                'title' => 'Добавить пользователя',
-                'model' => $form,
-            ]);
-        }
-
-        Yii::info(['event' => 'user.created.admin', 'user_id' => (int) $user->id], 'application.admin');
         Yii::$app->session->setFlash('success', 'Пользователь создан.');
 
         return $this->redirect(['/users/index']);
@@ -69,47 +61,28 @@ final class UsersController extends BaseWebController
 
     public function actionEdit(int $id): string
     {
-        $user = $this->findModel($id);
+        $user = $this->findRecord(UserRecord::class, $id, 'Пользователь не найден.');
         $form = new UserForm(['scenario' => UserForm::SCENARIO_UPDATE]);
         $form->loadFromUser($user);
 
-        return $this->render('form', [
-            'title' => 'Редактировать пользователя',
-            'model' => $form,
-        ]);
+        return $this->renderForm('Редактировать пользователя', $form);
     }
 
-    public function actionUpdate(?int $id = null): Response|string
+    public function actionUpdate(int $id): Response|string
     {
         $form = new UserForm(['scenario' => UserForm::SCENARIO_UPDATE]);
         $form->load(Yii::$app->request->post());
-        if ($id !== null) {
-            $form->id = $id;
-        }
-        $user = $this->findModel((int) $form->id);
+        $form->id = $id;
+        $user = $this->findRecord(
+            UserRecord::class,
+            (int) $form->id,
+            'Пользователь не найден.',
+        );
 
-        if (!$form->validate()) {
-            return $this->render('form', [
-                'title' => 'Редактировать пользователя',
-                'model' => $form,
-            ]);
-        }
-
-        $user->name = (string) $form->name;
-        $user->email = (string) $form->email;
-        if ($form->password !== null && $form->password !== '') {
-            $user->setPassword($form->password);
-        }
-        if (!$user->save()) {
-            $this->copyErrors($user, $form);
-
-            return $this->render('form', [
-                'title' => 'Редактировать пользователя',
-                'model' => $form,
-            ]);
+        if (!$form->validate() || !$this->users->update($user, $form)) {
+            return $this->renderForm('Редактировать пользователя', $form);
         }
 
-        Yii::info(['event' => 'user.updated.admin', 'user_id' => (int) $user->id], 'application.admin');
         Yii::$app->session->setFlash('success', 'Пользователь обновлён.');
 
         return $this->redirect(['/users/index']);
@@ -117,27 +90,22 @@ final class UsersController extends BaseWebController
 
     public function actionDestroy(int $id): Response|array
     {
-        $this->deleteRecord($this->findModel($id));
-        Yii::info(['event' => 'user.deleted.admin', 'user_id' => $id], 'application.admin');
+        $user = $this->findRecord(UserRecord::class, $id, 'Пользователь не найден.');
 
-        if (Yii::$app->request->isAjax) {
-            Yii::$app->response->format = Response::FORMAT_JSON;
-
-            return ['message' => 'Пользователь удалён.'];
-        }
-
-        Yii::$app->session->setFlash('success', 'Пользователь удалён.');
-
-        return $this->redirect(['/users/index']);
+        return $this->deleteAndRespond(
+            function () use ($user): void {
+                $this->users->delete($user);
+            },
+            'Пользователь удалён.',
+            ['/users/index'],
+        );
     }
 
-    private function findModel(int $id): User
+    private function renderForm(string $title, UserForm $model): string
     {
-        $model = User::findOne($id);
-        if ($model === null) {
-            throw new NotFoundHttpException('Пользователь не найден.');
-        }
-
-        return $model;
+        return $this->render('form', [
+            'title' => $title,
+            'model' => $model,
+        ]);
     }
 }

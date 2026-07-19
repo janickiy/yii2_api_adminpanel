@@ -4,27 +4,26 @@ declare(strict_types=1);
 
 namespace backend\controllers;
 
+use backend\services\DashboardMetricsService;
 use common\models\Admin;
-use common\models\Catalog;
-use common\models\Message;
-use common\models\Notes;
-use common\models\User;
+use yii\base\Module;
 
-class DashboardController extends BaseWebController
+final class DashboardController extends BaseWebController
 {
+    public function __construct(
+        string $id,
+        Module $module,
+        private readonly DashboardMetricsService $metrics,
+        array $config = [],
+    ) {
+        parent::__construct($id, $module, $config);
+    }
+
     public function actionIndex(): string
     {
-        $isAdmin = $this->admin()->role === Admin::ROLE_ADMIN;
-
         return $this->render('index', [
             'title' => 'Обзор',
-            'counts' => [
-                'notes' => (int) Notes::find()->count(),
-                'categories' => (int) Catalog::find()->count(),
-                'newMessages' => (int) Message::find()->where(['status' => Message::STATUS_NEW])->count(),
-                'users' => $isAdmin ? (int) User::find()->count() : null,
-                'admins' => $isAdmin ? (int) Admin::find()->count() : null,
-            ],
+            'counts' => $this->metrics->counts($this->admin()->role === Admin::ROLE_ADMIN),
         ]);
     }
 }

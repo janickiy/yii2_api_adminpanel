@@ -19,12 +19,12 @@ use PHPUnit\Framework\TestCase;
 
 final class AuthServiceTest extends TestCase
 {
-    public function testRegisterCreatesNormalizedUser(): void
+    public function testRegisterCreatesUserFromDto(): void
     {
         $users = new AuthTestUserRepository();
         $logger = new AuthTestLogger();
         $service = $this->service($users, logger: $logger);
-        $dto = $this->registerDto('  Alice Example  ', '  ALICE@EXAMPLE.TEST  ');
+        $dto = $this->registerDto('Alice Example', 'alice@example.test');
 
         $user = $service->register($dto);
 
@@ -36,6 +36,19 @@ final class AuthServiceTest extends TestCase
         self::assertSame('auth.user_registered', $logger->infoEvents[0]['message'] ?? null);
     }
 
+    public function testCommandsCanonicalizeIdentityDataOutsideHttp(): void
+    {
+        $users = new AuthTestUserRepository();
+        $service = $this->service($users);
+
+        $user = $service->register($this->registerDto('  Alice Example  ', '  ALICE@EXAMPLE.TEST  '));
+        $result = $service->login($this->loginDto(' ALICE@EXAMPLE.TEST ', 'Secret123!'));
+
+        self::assertSame('Alice Example', $user->name);
+        self::assertSame('alice@example.test', $user->email);
+        self::assertSame($user->id, $result->user->id);
+    }
+
     public function testRegisterRejectsDuplicateEmail(): void
     {
         $users = new AuthTestUserRepository();
@@ -44,7 +57,7 @@ final class AuthServiceTest extends TestCase
 
         $this->expectException(ConflictException::class);
 
-        $service->register($this->registerDto('Another Alice', ' ALICE@example.test '));
+        $service->register($this->registerDto('Another Alice', 'alice@example.test'));
     }
 
     public function testLoginReturnsTokenForValidCredentials(): void
@@ -54,7 +67,7 @@ final class AuthServiceTest extends TestCase
         ]);
         $tokens = new AuthTestTokenManager();
         $service = $this->service($users, tokens: $tokens);
-        $dto = $this->loginDto(' ALICE@example.test ', 'Secret123!');
+        $dto = $this->loginDto('alice@example.test', 'Secret123!');
 
         $result = $service->login($dto);
 
@@ -105,28 +118,16 @@ final class AuthServiceTest extends TestCase
 
     private function registerDto(string $name, string $email): RegisterUserDto
     {
-        $dto = new RegisterUserDto();
-        self::assertTrue($dto->load([
-            'name' => $name,
-            'email' => $email,
-            'password' => 'Secret123!',
-            'password_confirmation' => 'Secret123!',
-        ]));
-        self::assertTrue($dto->validate(), json_encode($dto->getErrors(), JSON_THROW_ON_ERROR));
-
-        return $dto;
+        return new RegisterUserDto(
+            name: $name,
+            email: $email,
+            password: 'Secret123!',
+        );
     }
 
     private function loginDto(string $email, string $password): LoginUserDto
     {
-        $dto = new LoginUserDto();
-        self::assertTrue($dto->load([
-            'email' => $email,
-            'password' => $password,
-        ]));
-        self::assertTrue($dto->validate(), json_encode($dto->getErrors(), JSON_THROW_ON_ERROR));
-
-        return $dto;
+        return new LoginUserDto($email, $password);
     }
 }
 

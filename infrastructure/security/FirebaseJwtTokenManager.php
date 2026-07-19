@@ -40,7 +40,7 @@ final readonly class FirebaseJwtTokenManager implements TokenManagerInterface
 
     public function issue(User $user): string
     {
-        $userId = $user->getId();
+        $userId = $user->id;
         if ($userId === null || $userId < 1) {
             throw new InvalidArgumentException('A persisted user is required to issue an access token.');
         }

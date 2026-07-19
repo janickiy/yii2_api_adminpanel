@@ -34,13 +34,13 @@ final class NoteDataMapper implements NoteDataMapperInterface
         }
 
         return [
-            'id' => $entity->getId(),
-            'user_id' => $entity->getUserId(),
-            'category_id' => $entity->getCategoryId(),
-            'title' => $entity->getTitle(),
-            'content' => $entity->getContent(),
-            'created_at' => TimestampMapper::toStorage($entity->getCreatedAt()),
-            'updated_at' => TimestampMapper::toStorage($entity->getUpdatedAt()),
+            'id' => $entity->id,
+            'user_id' => $entity->userId,
+            'category_id' => $entity->categoryId,
+            'title' => $entity->title,
+            'content' => $entity->content,
+            'created_at' => TimestampMapper::toStorage($entity->createdAt),
+            'updated_at' => TimestampMapper::toStorage($entity->updatedAt),
         ];
     }
 }

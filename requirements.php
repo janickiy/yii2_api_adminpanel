@@ -139,13 +139,6 @@ $requirements = array(
         'by' => 'Security reasons',
         'memo' => '"allow_url_include" should be disabled at php.ini',
     ),
-    'phpSmtp' => array(
-        'name' => 'PHP mail SMTP',
-        'mandatory' => false,
-        'condition' => strlen(ini_get('SMTP')) > 0,
-        'by' => 'Email sending',
-        'memo' => 'PHP mail SMTP server required',
-    ),
 );
 
 // OPcache check

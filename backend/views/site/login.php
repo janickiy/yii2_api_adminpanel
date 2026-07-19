@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /** @var yii\web\View $this */
-/** @var common\models\forms\AdminLoginForm $model */
+/** @var backend\forms\AdminLoginForm $model */
 
 use yii\helpers\Html;
 use yii\helpers\Url;

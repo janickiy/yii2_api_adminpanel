@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace frontend\components;
 
+use frontend\modules\api\http\ValidationHttpException;
 use Yii;
 use yii\web\HttpException;
 use yii\web\Response;
@@ -43,20 +44,23 @@ final class ApiAwareErrorHandler extends \yii\web\ErrorHandler
         $response->format = Response::FORMAT_JSON;
         $response->setStatusCodeByException($exception);
 
-        $requestId = $this->requestId();
-        $response->headers->set('X-Request-ID', $requestId);
-
         $message = $exception instanceof HttpException
             ? $exception->getMessage()
             : 'Internal server error.';
 
-        $response->data = [
-            'error' => [
-                'status' => $response->statusCode,
-                'message' => $message,
-                'request_id' => $requestId,
-            ],
+        $error = [
+            'status' => $response->statusCode,
+            'message' => $message,
         ];
+        if ($exception instanceof ValidationHttpException) {
+            $error['fields'] = $exception->fields();
+        } else {
+            $requestId = $this->requestId();
+            $response->headers->set('X-Request-ID', $requestId);
+            $error['request_id'] = $requestId;
+        }
+
+        $response->data = ['error' => $error];
         $response->send();
     }
 

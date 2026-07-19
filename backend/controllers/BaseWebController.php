@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace backend\controllers;
 
 use common\models\Admin;
+use domain\exceptions\PersistenceException;
 use Yii;
-use yii\base\Model;
 use yii\db\ActiveRecord;
 use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\ForbiddenHttpException;
+use yii\web\NotFoundHttpException;
+use yii\web\Response;
 use yii\web\ServerErrorHttpException;
 
 abstract class BaseWebController extends Controller
@@ -54,36 +56,88 @@ abstract class BaseWebController extends Controller
         return $identity;
     }
 
-    protected function can(string $permissions): bool
-    {
-        return $this->admin()->canAccess($permissions);
-    }
+    /**
+     * @template T of ActiveRecord
+     * @param class-string<T> $recordClass
+     * @return T
+     */
+    protected function findRecord(
+        string $recordClass,
+        int $id,
+        string $message = 'Запись не найдена.',
+    ): ActiveRecord {
+        $record = $recordClass::findOne($id);
 
-    protected function copyErrors(Model $source, Model $target): void
-    {
-        $targetAttributes = array_flip($target->attributes());
-
-        foreach ($source->getErrors() as $attribute => $errors) {
-            $targetAttribute = isset($targetAttributes[$attribute]) ? $attribute : '';
-            foreach ($errors as $error) {
-                $target->addError($targetAttribute, $error);
-            }
-        }
-    }
-
-    protected function deleteRecord(ActiveRecord $record): void
-    {
-        if ($record->delete() === 1) {
-            return;
+        if (!$record instanceof $recordClass) {
+            throw new NotFoundHttpException($message);
         }
 
+        return $record;
+    }
+
+    /**
+     * @param callable(): void $delete
+     * @param array<int|string, mixed> $redirect
+     */
+    protected function deleteAndRespond(
+        callable $delete,
+        string $message,
+        array $redirect,
+    ): Response|array {
+        try {
+            $delete();
+        } catch (PersistenceException $exception) {
+            $this->throwPersistenceError($exception, 'Не удалось удалить запись.');
+        }
+
+        return $this->successResponse($message, $redirect);
+    }
+
+    /**
+     * @param array<int|string, mixed> $redirect
+     */
+    protected function successResponse(string $message, array $redirect): Response|array
+    {
+        if (Yii::$app->request->isAjax) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+
+            return ['message' => $message];
+        }
+
+        Yii::$app->session->setFlash('success', $message);
+
+        return $this->redirect($redirect);
+    }
+
+    /**
+     * @param array<int|string, mixed> $redirect
+     */
+    protected function rejectedResponse(
+        string $message,
+        array $redirect,
+        int $statusCode = 403,
+    ): Response|array {
+        if (Yii::$app->request->isAjax) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+            Yii::$app->response->statusCode = $statusCode;
+
+            return ['message' => $message];
+        }
+
+        Yii::$app->session->setFlash('error', $message);
+
+        return $this->redirect($redirect);
+    }
+
+    protected function throwPersistenceError(
+        PersistenceException $exception,
+        string $message,
+    ): never {
         Yii::error([
-            'event' => 'admin.delete_failed',
-            'model' => $record::class,
-            'primary_key' => $record->getPrimaryKey(),
-            'errors' => $record->getErrors(),
+            'event' => 'admin.persistence_failed',
+            'exception_class' => $exception::class,
         ], 'application.admin');
 
-        throw new ServerErrorHttpException('Не удалось удалить запись.');
+        throw new ServerErrorHttpException($message, 0, $exception);
     }
 }

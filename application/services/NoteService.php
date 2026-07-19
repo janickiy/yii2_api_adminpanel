@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace application\services;
 
-use application\dto\note\CreateNoteDto;
 use application\dto\note\NoteQueryDto;
-use application\dto\note\UpdateNoteDto;
+use application\dto\note\NoteWriteDto;
 use application\results\NotePage;
 use domain\entities\Note;
+use domain\exceptions\CategoryNotFoundException;
 use domain\exceptions\NotFoundException;
 use domain\repositories\CategoryRepositoryInterface;
 use domain\repositories\NoteRepositoryInterface;
@@ -25,14 +25,14 @@ final readonly class NoteService
 
     public function list(int $userId, NoteQueryDto $query): NotePage
     {
-        $categoryId = $query->categoryId();
+        $categoryId = $query->categoryId;
 
         if ($categoryId !== null) {
             $this->assertCategoryExists($categoryId);
         }
 
-        $page = min(NoteQueryDto::MAX_PAGE, max(1, $query->pageNumber()));
-        $perPage = min(100, max(1, $query->perPage()));
+        $page = $query->page;
+        $perPage = $query->perPage;
         $offset = ($page - 1) * $perPage;
         $total = $this->notes->countOwned($userId, $categoryId);
         $items = $this->notes->findAllOwned($userId, $categoryId, $perPage, $offset);
@@ -61,17 +61,17 @@ final readonly class NoteService
         return $note;
     }
 
-    public function create(int $userId, CreateNoteDto $dto): Note
+    public function create(int $userId, NoteWriteDto $dto): Note
     {
-        $categoryId = $dto->categoryId();
+        $categoryId = $dto->categoryId;
         $this->assertCategoryExists($categoryId);
 
         $note = new Note(
             id: null,
             userId: $userId,
             categoryId: $categoryId,
-            title: $dto->titleValue(),
-            content: $dto->contentValue(),
+            title: $dto->title,
+            content: $dto->content,
         );
         $savedNote = $this->notes->save($note);
 
@@ -84,18 +84,18 @@ final readonly class NoteService
         return $savedNote;
     }
 
-    public function update(int $userId, int $noteId, UpdateNoteDto $dto): Note
+    public function update(int $userId, int $noteId, NoteWriteDto $dto): Note
     {
         $currentNote = $this->findOwnedOrFail($noteId, $userId);
-        $categoryId = $dto->categoryId();
+        $categoryId = $dto->categoryId;
         $this->assertCategoryExists($categoryId);
 
         $note = new Note(
             id: $currentNote->id,
             userId: $currentNote->userId,
             categoryId: $categoryId,
-            title: $dto->titleValue(),
-            content: $dto->contentValue(),
+            title: $dto->title,
+            content: $dto->content,
             createdAt: $currentNote->createdAt,
             updatedAt: $currentNote->updatedAt,
         );
@@ -147,6 +147,6 @@ final readonly class NoteService
             'category_id' => $categoryId,
         ]);
 
-        throw new NotFoundException('Category not found.');
+        throw new CategoryNotFoundException('Category not found.');
     }
 }

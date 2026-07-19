@@ -94,7 +94,7 @@ $isActive = static function (array $prefixes) use ($path): string {
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="<?= Url::to(['/catalog/index']) ?>" class="nav-link<?= $isActive(['cp/categories', 'cp/catalog']) ?>">
+                            <a href="<?= Url::to(['/category/index']) ?>" class="nav-link<?= $isActive(['cp/categories']) ?>">
                                 <i class="nav-icon bi bi-tags" aria-hidden="true"></i>
                                 <p>Категории</p>
                             </a>
@@ -115,7 +115,7 @@ $isActive = static function (array $prefixes) use ($path): string {
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="<?= Url::to(['/admin/index']) ?>" class="nav-link<?= $isActive(['cp/admins', 'cp/admin']) ?>">
+                            <a href="<?= Url::to(['/admin/index']) ?>" class="nav-link<?= $isActive(['cp/admins']) ?>">
                                 <i class="nav-icon bi bi-person-gear" aria-hidden="true"></i>
                                 <p>Администраторы</p>
                             </a>

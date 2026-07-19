@@ -13,9 +13,6 @@ $jwtSecret = app_secret(
 );
 
 return [
-    'adminEmail' => env('ADMIN_EMAIL', 'admin@example.com'),
-    'senderEmail' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-    'senderName' => env('MAIL_FROM_NAME', env('APP_NAME', 'Notes Service')),
     'jwtSecret' => $jwtSecret,
     'jwtIssuer' => (string) env('JWT_ISSUER', env('APP_URL', 'http://localhost:8082')),
     'jwtAudience' => (string) env('JWT_AUDIENCE', 'notes-api'),

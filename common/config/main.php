@@ -36,7 +36,6 @@ return [
             'class' => \yii\mutex\PgsqlMutex::class,
             'db' => 'db',
         ],
-        'mailer' => \yii\mail\MailerInterface::class,
     ],
     'params' => $params,
 ];
