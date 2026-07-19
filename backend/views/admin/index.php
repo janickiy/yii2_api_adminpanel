@@ -6,11 +6,13 @@ declare(strict_types=1);
 /** @var string $title */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
-use common\models\Admin;
+use backend\forms\AdminForm;
+use common\entities\Admin;
 use yii\helpers\Html;
 
 $this->title = $title;
 $this->params['title'] = $title;
+$roleLabels = AdminForm::roleLabels();
 /** @var Admin[] $models */
 $models = $dataProvider->getModels();
 ?>
@@ -28,7 +30,7 @@ $models = $dataProvider->getModels();
                     <td class="text-body-secondary"><?= (int) $model->id ?></td>
                     <td><?= Html::encode($model->name) ?></td>
                     <td><?= Html::encode($model->login) ?></td>
-                    <td><span class="badge text-bg-<?= $model->role === Admin::ROLE_ADMIN ? 'primary' : 'secondary' ?>"><?= Html::encode(Admin::roleLabels()[$model->role] ?? $model->role) ?></span></td>
+                    <td><span class="badge text-bg-<?= $model->role === Admin::ROLE_ADMIN ? 'primary' : 'secondary' ?>"><?= Html::encode($roleLabels[$model->role] ?? $model->role) ?></span></td>
                     <td class="text-end"><div class="table-actions">
                         <?= Html::a('<i class="bi bi-pencil" aria-hidden="true"></i>', ['/admin/edit', 'id' => $model->id], ['class' => 'btn btn-outline-primary btn-sm', 'title' => 'Редактировать']) ?>
                         <?php if ((int) $model->id !== (int) Yii::$app->user->id): ?>

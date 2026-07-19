@@ -3,14 +3,18 @@
 declare(strict_types=1);
 
 /** @var yii\web\View $this */
-/** @var common\models\Message $model */
+/** @var common\entities\Message $model */
 /** @var string $title */
 
-use common\models\Message;
+use common\entities\Message;
 use yii\helpers\Html;
 
 $this->title = $title;
 $this->params['title'] = $title;
+$statusLabels = [
+    Message::STATUS_NEW => 'Новое',
+    Message::STATUS_READ => 'Просмотрено',
+];
 $isRead = $model->status === Message::STATUS_READ;
 ?>
 <div class="row g-4">
@@ -19,7 +23,7 @@ $isRead = $model->status === Message::STATUS_READ;
             <div class="card-header d-flex align-items-center justify-content-between">
                 <h2 class="card-title mb-0"><?= Html::encode($model->subject) ?></h2>
                 <span class="badge text-bg-<?= $isRead ? 'secondary' : 'primary' ?> ms-auto">
-                    <?= Html::encode(Message::statusLabels()[$model->status] ?? $model->status) ?>
+                    <?= Html::encode($statusLabels[$model->status] ?? $model->status) ?>
                 </span>
             </div>
             <div class="card-body">

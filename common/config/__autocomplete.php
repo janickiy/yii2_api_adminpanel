@@ -28,7 +28,7 @@ class __Application
 }
 
 /**
- * @property common\models\User $identity
+ * @property frontend\components\api\UserIdentity|backend\components\AdminIdentity $identity
  */
 class __WebUser
 {

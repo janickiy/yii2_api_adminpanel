@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace backend\forms;
 
-use infrastructure\persistence\records\UserRecord;
+use common\dtos\UserWriteDto;
+use common\entities\User;
 
 final class UserForm extends BackofficeForm
 {
@@ -37,7 +38,6 @@ final class UserForm extends BackofficeForm
             ['name', 'string', 'max' => 160],
             ['email', 'email'],
             ['email', 'string', 'max' => 255],
-            ['email', 'validateEmail'],
             ['password', 'required', 'on' => self::SCENARIO_CREATE],
             [['password', 'password_again'], 'string', 'min' => 8, 'max' => 255],
             ['password_again', 'compare', 'compareAttribute' => 'password'],
@@ -54,26 +54,19 @@ final class UserForm extends BackofficeForm
         ];
     }
 
-    public function validateEmail(string $attribute): void
-    {
-        if ($this->hasErrors($attribute)) {
-            return;
-        }
-
-        $query = UserRecord::find()->where(['email' => $this->email]);
-        if ($this->id !== null) {
-            $query->andWhere(['<>', 'id', $this->id]);
-        }
-
-        if ($query->exists()) {
-            $this->addError($attribute, 'Пользователь с таким email уже существует.');
-        }
-    }
-
-    public function loadFromUser(UserRecord $user): void
+    public function loadFromUser(User $user): void
     {
         $this->id = (int) $user->id;
         $this->name = $user->name;
         $this->email = $user->email;
+    }
+
+    public function toDto(): UserWriteDto
+    {
+        return new UserWriteDto(
+            name: (string) $this->name,
+            email: (string) $this->email,
+            password: $this->password === null || $this->password === '' ? null : $this->password,
+        );
     }
 }

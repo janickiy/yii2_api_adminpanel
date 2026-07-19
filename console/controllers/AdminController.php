@@ -4,14 +4,27 @@ declare(strict_types=1);
 
 namespace console\controllers;
 
-use common\models\Admin;
-use Yii;
+use common\dtos\AdminWriteDto;
+use common\entities\Admin;
+use common\repositories\PersistenceException;
+use common\services\AdminService;
+use common\services\exceptions\ConflictException;
+use yii\base\Module;
 use yii\console\Controller;
 use yii\console\ExitCode;
 use yii\helpers\Console;
 
 final class AdminController extends Controller
 {
+    public function __construct(
+        string $id,
+        Module $module,
+        private readonly AdminService $admins,
+        array $config = [],
+    ) {
+        parent::__construct($id, $module, $config);
+    }
+
     /**
      * Creates the first administrator. Prefer ADMIN_PASSWORD to a command-line password.
      */
@@ -35,31 +48,29 @@ final class AdminController extends Controller
 
             return ExitCode::DATAERR;
         }
-        if (!array_key_exists($role, Admin::roleLabels())) {
+        if (!in_array($role, [Admin::ROLE_ADMIN, Admin::ROLE_MODERATOR], true)) {
             $this->stderr("Role must be admin or moderator.\n", Console::FG_RED);
 
             return ExitCode::DATAERR;
         }
-        if (Admin::find()->where(['login' => $login])->exists()) {
+
+        try {
+            $this->admins->create(new AdminWriteDto(
+                name: $name,
+                login: $login,
+                role: $role,
+                password: $password,
+            ));
+        } catch (ConflictException) {
             $this->stderr("An administrator with this login already exists.\n", Console::FG_RED);
 
             return ExitCode::DATAERR;
-        }
-
-        $admin = new Admin([
-            'login' => $login,
-            'name' => $name,
-            'role' => $role,
-        ]);
-        $admin->setPassword($password);
-
-        if (!$admin->save()) {
-            $this->stderr('Unable to create administrator: ' . json_encode($admin->getErrors()) . "\n", Console::FG_RED);
+        } catch (PersistenceException) {
+            $this->stderr("Unable to create administrator.\n", Console::FG_RED);
 
             return ExitCode::UNSPECIFIED_ERROR;
         }
 
-        Yii::info(['event' => 'admin.created.console', 'admin_id' => (int) $admin->id], 'application');
         $this->stdout("Administrator created.\n", Console::FG_GREEN);
 
         return ExitCode::OK;

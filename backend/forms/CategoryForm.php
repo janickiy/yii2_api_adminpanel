@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace backend\forms;
 
-use infrastructure\persistence\records\CategoryRecord;
+use common\dtos\CategoryWriteDto;
+use common\entities\Category;
 
 final class CategoryForm extends BackofficeForm
 {
@@ -18,7 +19,6 @@ final class CategoryForm extends BackofficeForm
             ['name', 'required'],
             ['name', 'trim'],
             ['name', 'string', 'max' => 120],
-            ['name', 'validateName'],
         ];
     }
 
@@ -29,25 +29,14 @@ final class CategoryForm extends BackofficeForm
         ];
     }
 
-    public function validateName(string $attribute): void
-    {
-        if ($this->hasErrors($attribute)) {
-            return;
-        }
-
-        $query = CategoryRecord::find()->where(['name' => $this->name]);
-        if ($this->id !== null) {
-            $query->andWhere(['<>', 'id', $this->id]);
-        }
-
-        if ($query->exists()) {
-            $this->addError($attribute, 'Категория с таким названием уже существует.');
-        }
-    }
-
-    public function loadFromCategory(CategoryRecord $category): void
+    public function loadFromCategory(Category $category): void
     {
         $this->id = (int) $category->id;
         $this->name = $category->name;
+    }
+
+    public function toDto(): CategoryWriteDto
+    {
+        return new CategoryWriteDto((string) $this->name);
     }
 }

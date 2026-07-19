@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace tests\Unit;
 
+use FilesystemIterator;
 use PHPUnit\Framework\TestCase;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use SplFileInfo;
 
 final class AdvancedStructureTest extends TestCase
 {
@@ -15,14 +19,40 @@ final class AdvancedStructureTest extends TestCase
         $this->root = dirname(__DIR__, 2);
     }
 
-    public function testLayeredDirectoriesAndAliasesExist(): void
+    public function testCommonApplicationStructureIsCanonical(): void
     {
-        self::assertDirectoryExists($this->root . '/application');
-        self::assertDirectoryExists($this->root . '/domain');
-        self::assertDirectoryExists($this->root . '/infrastructure');
-        self::assertSame($this->root . '/application', \Yii::getAlias('@application'));
-        self::assertSame($this->root . '/domain', \Yii::getAlias('@domain'));
-        self::assertSame($this->root . '/infrastructure', \Yii::getAlias('@infrastructure'));
+        foreach (['dtos', 'entities', 'repositories', 'services'] as $directory) {
+            self::assertDirectoryExists($this->root . '/common/' . $directory);
+        }
+
+        foreach (
+            [
+                'application',
+                'domain',
+                'infrastructure',
+                'common/models',
+                'backend/services',
+                'frontend/services',
+                'frontend/modules/api',
+            ] as $directory
+        ) {
+            self::assertDirectoryDoesNotExist($this->root . '/' . $directory);
+        }
+    }
+
+    public function testRemovedMapperImplementationIsAbsentFromProductionCode(): void
+    {
+        $legacyPattern = 'Data' . 'Mapper';
+
+        foreach (['common', 'backend', 'frontend', 'console'] as $directory) {
+            foreach ($this->phpFiles($this->root . '/' . $directory) as $path => $source) {
+                self::assertStringNotContainsString(
+                    $legacyPattern,
+                    $source,
+                    sprintf('%s still references the removed mapper abstraction.', $path),
+                );
+            }
+        }
     }
 
     public function testDockerUsesPhp84AndPostgreSqlOnly(): void
@@ -40,9 +70,7 @@ final class AdvancedStructureTest extends TestCase
 
     public function testTrackedOpenApiContractContainsCanonicalResources(): void
     {
-        $spec = (string) file_get_contents(
-            $this->root . '/frontend/modules/api/openapi/openapi.yaml',
-        );
+        $spec = (string) file_get_contents($this->root . '/frontend/openapi/openapi.yaml');
 
         self::assertStringContainsString('/api/v1/register:', $spec);
         self::assertStringContainsString('/api/v1/login:', $spec);
@@ -51,5 +79,30 @@ final class AdvancedStructureTest extends TestCase
         self::assertStringContainsString('/api/v1/notes:', $spec);
         self::assertStringContainsString('/api/v1/notes/{id}:', $spec);
         self::assertStringContainsString('bearerAuth:', $spec);
+    }
+
+    /** @return iterable<string, string> */
+    private function phpFiles(string $directory): iterable
+    {
+        $files = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS),
+        );
+
+        /** @var SplFileInfo $file */
+        foreach ($files as $file) {
+            if (!$file->isFile() || $file->getExtension() !== 'php') {
+                continue;
+            }
+
+            $path = $file->getPathname();
+            if (str_contains($path, '/runtime/') || str_contains($path, '/web/assets/')) {
+                continue;
+            }
+
+            $source = file_get_contents($path);
+            self::assertIsString($source);
+
+            yield ltrim(substr($path, strlen($this->root)), DIRECTORY_SEPARATOR) => $source;
+        }
     }
 }

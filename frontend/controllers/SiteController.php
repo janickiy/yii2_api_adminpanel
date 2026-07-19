@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace frontend\controllers;
 
 use common\filters\PublicRateLimitFilter;
+use common\repositories\PersistenceException;
+use common\services\MessageService;
 use frontend\forms\FeedbackForm;
-use frontend\services\FeedbackService;
 use Yii;
 use yii\base\Module;
 use yii\base\UserException;
@@ -18,7 +19,7 @@ final class SiteController extends Controller
     public function __construct(
         string $id,
         Module $module,
-        private readonly FeedbackService $feedback,
+        private readonly MessageService $messages,
         array $config = [],
     ) {
         parent::__construct($id, $module, $config);
@@ -44,10 +45,22 @@ final class SiteController extends Controller
         if (Yii::$app->request->isPost) {
             $feedbackForm->load(Yii::$app->request->post());
 
-            if ($this->feedback->submit($feedbackForm)) {
-                Yii::$app->session->setFlash('success', 'Спасибо! Ваше сообщение отправлено.');
+            if ($feedbackForm->validate()) {
+                try {
+                    $this->messages->submit($feedbackForm->toDto());
+                    Yii::$app->session->setFlash('success', 'Спасибо! Ваше сообщение отправлено.');
 
-                return $this->refresh();
+                    return $this->refresh();
+                } catch (PersistenceException $exception) {
+                    Yii::error([
+                        'event' => 'feedback.persistence_failed',
+                        'exception_class' => $exception::class,
+                    ], 'application.feedback');
+                    $feedbackForm->addError(
+                        'message',
+                        'Не удалось отправить сообщение. Попробуйте ещё раз позже.',
+                    );
+                }
             }
         }
 

@@ -2,13 +2,10 @@ parameters:
     level: 5
 
     paths:
-        - application
         - backend
         - common
         - console
-        - domain
         - frontend
-        - infrastructure
         - tests
 
     excludePaths:
@@ -17,12 +14,6 @@ parameters:
         - frontend/views/*
 
     ignoreErrors:
-        # DataMapper has an object-level runtime contract; concrete mappers
-        # keep defensive type guards for callers outside static analysis.
-        -
-            identifier: instanceof.alwaysTrue
-            paths:
-                - infrastructure/persistence/mappers/*
         # The in-memory test repository is pure internally but implements an
         # intentionally impure persistence contract.
         -

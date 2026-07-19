@@ -2,14 +2,6 @@
 
 declare(strict_types=1);
 
-use backend\services\AdminManagementService;
-use backend\services\CategoryManagementService;
-use backend\services\DashboardMetricsService;
-use backend\services\MessageManagementService;
-use backend\services\NoteManagementService;
-use backend\services\RecordDeleter;
-use backend\services\UserManagementService;
-
 $params = require __DIR__ . '/params.php';
 $cookieValidationKey = app_secret(
     'BACKEND_COOKIE_VALIDATION_KEY or COOKIE_VALIDATION_KEY',
@@ -26,17 +18,6 @@ $config = [
     'id' => 'yii2-api-adminpanel-backend',
     'basePath' => dirname(__DIR__),
     'controllerNamespace' => 'backend\controllers',
-    'container' => [
-        'singletons' => [
-            AdminManagementService::class => AdminManagementService::class,
-            CategoryManagementService::class => CategoryManagementService::class,
-            DashboardMetricsService::class => DashboardMetricsService::class,
-            MessageManagementService::class => MessageManagementService::class,
-            NoteManagementService::class => NoteManagementService::class,
-            RecordDeleter::class => RecordDeleter::class,
-            UserManagementService::class => UserManagementService::class,
-        ],
-    ],
     'bootstrap' => ['log'],
     'components' => [
         'request' => [
@@ -48,7 +29,7 @@ $config = [
             ],
         ],
         'user' => [
-            'identityClass' => \common\models\Admin::class,
+            'identityClass' => \backend\components\AdminIdentity::class,
             'enableAutoLogin' => true,
             'loginUrl' => ['site/login'],
             'identityCookie' => [

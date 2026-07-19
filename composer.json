@@ -1,6 +1,6 @@
 {
     "name": "local/yii2-api-adminpanel",
-    "description": "Layered notes service on Yii2 Advanced, PHP 8.4 and PostgreSQL.",
+    "description": "Notes service on Yii2 Advanced, PHP 8.4 and PostgreSQL.",
     "keywords": ["yii2", "adminpanel", "api", "jwt", "swagger"],
     "homepage": "https://www.yiiframework.com/",
     "type": "project",
@@ -53,10 +53,11 @@
     },
     "autoload": {
         "psr-4": {
-            "application\\": "application/",
-            "domain\\": "domain/",
-            "infrastructure\\": "infrastructure/"
-        }
+            "common\\": "common/"
+        },
+        "exclude-from-classmap": [
+            "/common/config/__autocomplete.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

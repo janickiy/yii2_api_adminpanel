@@ -6,11 +6,15 @@ declare(strict_types=1);
 /** @var string $title */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
-use common\models\Message;
+use common\entities\Message;
 use yii\helpers\Html;
 
 $this->title = $title;
 $this->params['title'] = $title;
+$statusLabels = [
+    Message::STATUS_NEW => 'Новое',
+    Message::STATUS_READ => 'Просмотрено',
+];
 /** @var Message[] $models */
 $models = $dataProvider->getModels();
 ?>
@@ -27,7 +31,7 @@ $models = $dataProvider->getModels();
                     <td><?= Html::a(Html::encode($model->subject), ['/messages/view', 'id' => $model->id], ['class' => $model->status === Message::STATUS_NEW ? 'fw-semibold' : '']) ?></td>
                     <td><?= Html::mailto(Html::encode($model->email), $model->email) ?></td>
                     <td><?= $model->phone ? Html::encode($model->phone) : '—' ?></td>
-                    <td><span class="badge text-bg-<?= $model->status === Message::STATUS_NEW ? 'primary' : 'secondary' ?>"><?= Html::encode(Message::statusLabels()[$model->status] ?? $model->status) ?></span></td>
+                    <td><span class="badge text-bg-<?= $model->status === Message::STATUS_NEW ? 'primary' : 'secondary' ?>"><?= Html::encode($statusLabels[$model->status] ?? $model->status) ?></span></td>
                     <td><?= Html::encode(Yii::$app->formatter->asDatetime($model->created_at, 'php:d.m.Y H:i')) ?></td>
                     <td class="text-end"><div class="table-actions">
                         <?= Html::a('<i class="bi bi-eye" aria-hidden="true"></i>', ['/messages/view', 'id' => $model->id], ['class' => 'btn btn-outline-primary btn-sm', 'title' => 'Просмотреть']) ?>

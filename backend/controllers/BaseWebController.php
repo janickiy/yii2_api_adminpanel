@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace backend\controllers;
 
-use common\models\Admin;
-use domain\exceptions\PersistenceException;
+use backend\components\AdminIdentity;
+use common\entities\Admin;
+use common\repositories\PersistenceException;
+use common\services\AdminService;
+use common\services\exceptions\NotFoundException;
 use Yii;
-use yii\db\ActiveRecord;
+use yii\base\Module;
+use yii\data\ActiveDataProvider;
+use yii\db\ActiveQuery;
 use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\ForbiddenHttpException;
@@ -20,6 +25,15 @@ abstract class BaseWebController extends Controller
     public $layout = 'admin';
 
     protected string $permissions = '';
+
+    public function __construct(
+        string $id,
+        Module $module,
+        private readonly AdminService $access,
+        array $config = [],
+    ) {
+        parent::__construct($id, $module, $config);
+    }
 
     public function behaviors(): array
     {
@@ -41,7 +55,7 @@ abstract class BaseWebController extends Controller
             return false;
         }
 
-        if ($this->permissions !== '' && !$this->admin()->canAccess($this->permissions)) {
+        if ($this->permissions !== '' && !$this->canAccess($this->permissions)) {
             throw new ForbiddenHttpException('Доступ запрещен.');
         }
 
@@ -50,29 +64,34 @@ abstract class BaseWebController extends Controller
 
     protected function admin(): Admin
     {
-        /** @var Admin $identity */
         $identity = Yii::$app->user->identity;
+        if (!$identity instanceof AdminIdentity) {
+            throw new ForbiddenHttpException('Доступ запрещен.');
+        }
 
-        return $identity;
+        return $identity->entity();
+    }
+
+    protected function canAccess(string $permissions): bool
+    {
+        return $this->access->canAccess($this->admin(), $permissions);
     }
 
     /**
-     * @template T of ActiveRecord
-     * @param class-string<T> $recordClass
-     * @return T
+     * @template T of \yii\db\ActiveRecord
+     * @param ActiveQuery<T> $query
      */
-    protected function findRecord(
-        string $recordClass,
-        int $id,
-        string $message = 'Запись не найдена.',
-    ): ActiveRecord {
-        $record = $recordClass::findOne($id);
+    protected function dataProvider(ActiveQuery $query, int $pageSize = 20): ActiveDataProvider
+    {
+        return new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => ['pageSize' => $pageSize],
+        ]);
+    }
 
-        if (!$record instanceof $recordClass) {
-            throw new NotFoundHttpException($message);
-        }
-
-        return $record;
+    protected function throwNotFound(NotFoundException $exception, string $message): never
+    {
+        throw new NotFoundHttpException($message, 0, $exception);
     }
 
     /**

@@ -5,7 +5,8 @@ declare(strict_types=1);
 /** @var yii\web\View $this */
 /** @var string $content */
 
-use common\models\Admin;
+use backend\components\AdminIdentity;
+use common\entities\Admin;
 use yii\helpers\Html;
 use yii\helpers\Json;
 use yii\helpers\Url;
@@ -16,7 +17,13 @@ $this->registerMetaTag(['name' => 'viewport', 'content' => 'width=device-width, 
 
 $title = (string) ($this->params['title'] ?? $this->title ?? 'Панель управления');
 $identity = Yii::$app->user->identity;
-$admin = $identity instanceof Admin ? $identity : null;
+$admin = $identity instanceof AdminIdentity ? $identity->entity() : null;
+$canManageContent = $admin !== null && in_array(
+    $admin->role,
+    [Admin::ROLE_ADMIN, Admin::ROLE_MODERATOR],
+    true,
+);
+$canManageAccess = $admin?->role === Admin::ROLE_ADMIN;
 $path = trim(Yii::$app->request->pathInfo, '/');
 $isActive = static function (array $prefixes) use ($path): string {
     foreach ($prefixes as $prefix) {
@@ -85,7 +92,7 @@ $isActive = static function (array $prefixes) use ($path): string {
                             <p>Обзор</p>
                         </a>
                     </li>
-                    <?php if ($admin !== null && $admin->canAccess(Admin::ROLE_ADMIN . '|' . Admin::ROLE_MODERATOR)): ?>
+                    <?php if ($canManageContent): ?>
                         <li class="nav-header">КОНТЕНТ</li>
                         <li class="nav-item">
                             <a href="<?= Url::to(['/notes/index']) ?>" class="nav-link<?= $isActive(['cp/notes']) ?>">
@@ -106,7 +113,7 @@ $isActive = static function (array $prefixes) use ($path): string {
                             </a>
                         </li>
                     <?php endif ?>
-                    <?php if ($admin !== null && $admin->canAccess(Admin::ROLE_ADMIN)): ?>
+                    <?php if ($canManageAccess): ?>
                         <li class="nav-header">ДОСТУП</li>
                         <li class="nav-item">
                             <a href="<?= Url::to(['/users/index']) ?>" class="nav-link<?= $isActive(['cp/users']) ?>">

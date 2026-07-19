@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use frontend\services\FeedbackService;
-
 $params = require __DIR__ . '/params.php';
 $cookieValidationKey = app_secret(
     'FRONTEND_COOKIE_VALIDATION_KEY or COOKIE_VALIDATION_KEY',
@@ -20,17 +18,7 @@ $config = [
     'id' => 'yii2-api-adminpanel-frontend',
     'basePath' => dirname(__DIR__),
     'controllerNamespace' => 'frontend\controllers',
-    'container' => [
-        'singletons' => [
-            FeedbackService::class => FeedbackService::class,
-        ],
-    ],
     'bootstrap' => ['log'],
-    'modules' => [
-        'api' => [
-            'class' => \frontend\modules\api\Module::class,
-        ],
-    ],
     'components' => [
         'request' => [
             'csrfParam' => '_csrf-frontend',
@@ -42,13 +30,13 @@ $config = [
         ],
         'apiUser' => [
             'class' => \yii\web\User::class,
-            'identityClass' => \common\models\User::class,
+            'identityClass' => \frontend\components\api\UserIdentity::class,
             'enableAutoLogin' => false,
             'enableSession' => false,
             'loginUrl' => null,
         ],
         'user' => [
-            'identityClass' => \common\models\User::class,
+            'identityClass' => \frontend\components\api\UserIdentity::class,
             'enableAutoLogin' => false,
             'loginUrl' => null,
         ],
@@ -99,6 +87,15 @@ $config = [
                 'PUT,PATCH api/v1/notes/<id:\d+>' => 'api/note/update',
                 'DELETE api/v1/notes/<id:\d+>' => 'api/note/delete',
                 'GET api/v1/categories' => 'api/category/index',
+
+                // Route unsupported verbs to the same controllers so VerbFilter returns 405.
+                'api/v1' => 'api/site/index',
+                'api/v1/register' => 'api/auth/register',
+                'api/v1/login' => 'api/auth/login',
+                'api/v1/logout' => 'api/auth/logout',
+                'api/v1/notes' => 'api/note/index',
+                'api/v1/notes/<id:\d+>' => 'api/note/show',
+                'api/v1/categories' => 'api/category/index',
             ],
         ],
     ],

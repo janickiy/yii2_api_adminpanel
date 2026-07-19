@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace backend\controllers;
 
 use backend\forms\CategoryForm;
-use backend\services\CategoryManagementService;
-use common\models\Admin;
-use domain\exceptions\PersistenceException;
-use infrastructure\persistence\records\CategoryRecord;
+use common\entities\Admin;
+use common\entities\Category;
+use common\repositories\PersistenceException;
+use common\services\AdminService;
+use common\services\CategoryService;
+use common\services\exceptions\ConflictException;
+use common\services\exceptions\NotFoundException;
 use Yii;
 use yii\base\Module;
-use yii\data\ActiveDataProvider;
 use yii\web\Response;
 
 final class CategoryController extends BaseWebController
@@ -21,20 +23,18 @@ final class CategoryController extends BaseWebController
     public function __construct(
         string $id,
         Module $module,
-        private readonly CategoryManagementService $categories,
+        private readonly CategoryService $categories,
+        AdminService $access,
         array $config = [],
     ) {
-        parent::__construct($id, $module, $config);
+        parent::__construct($id, $module, $access, $config);
     }
 
     public function actionIndex(): string
     {
         return $this->render('index', [
             'title' => 'Категории',
-            'dataProvider' => new ActiveDataProvider([
-                'query' => CategoryRecord::find()->orderBy(['name' => SORT_ASC]),
-                'pagination' => ['pageSize' => 20],
-            ]),
+            'dataProvider' => $this->dataProvider($this->categories->query()),
         ]);
     }
 
@@ -48,8 +48,18 @@ final class CategoryController extends BaseWebController
         $form = new CategoryForm();
         $form->load(Yii::$app->request->post());
 
-        if (!$form->validate() || !$this->categories->create($form)) {
+        if (!$form->validate()) {
             return $this->renderForm('Добавить категорию', $form);
+        }
+
+        try {
+            $this->categories->create($form->toDto());
+        } catch (ConflictException) {
+            $form->addError('name', 'Категория с таким именем уже существует.');
+
+            return $this->renderForm('Добавить категорию', $form);
+        } catch (PersistenceException $exception) {
+            $this->throwPersistenceError($exception, 'Не удалось создать категорию.');
         }
 
         Yii::$app->session->setFlash('success', 'Категория создана.');
@@ -59,7 +69,7 @@ final class CategoryController extends BaseWebController
 
     public function actionEdit(int $id): string
     {
-        $category = $this->findRecord(CategoryRecord::class, $id);
+        $category = $this->getCategory($id);
         $form = new CategoryForm();
         $form->loadFromCategory($category);
 
@@ -68,13 +78,23 @@ final class CategoryController extends BaseWebController
 
     public function actionUpdate(int $id): Response|string
     {
+        $category = $this->getCategory($id);
         $form = new CategoryForm();
         $form->load(Yii::$app->request->post());
         $form->id = $id;
-        $category = $this->findRecord(CategoryRecord::class, (int) $form->id);
 
-        if (!$form->validate() || !$this->categories->update($category, $form)) {
+        if (!$form->validate()) {
             return $this->renderForm('Редактирование категории', $form);
+        }
+
+        try {
+            $this->categories->update($category, $form->toDto());
+        } catch (ConflictException) {
+            $form->addError('name', 'Категория с таким именем уже существует.');
+
+            return $this->renderForm('Редактирование категории', $form);
+        } catch (PersistenceException $exception) {
+            $this->throwPersistenceError($exception, 'Не удалось обновить категорию.');
         }
 
         Yii::$app->session->setFlash('success', 'Категория обновлена.');
@@ -84,7 +104,7 @@ final class CategoryController extends BaseWebController
 
     public function actionDestroy(int $id): Response|array
     {
-        $category = $this->findRecord(CategoryRecord::class, $id);
+        $category = $this->getCategory($id);
 
         try {
             $deleted = $this->categories->delete($category);
@@ -101,6 +121,17 @@ final class CategoryController extends BaseWebController
         }
 
         return $this->successResponse('Категория удалена.', ['/category/index']);
+    }
+
+    private function getCategory(int $id): Category
+    {
+        try {
+            return $this->categories->get($id);
+        } catch (NotFoundException $exception) {
+            $this->throwNotFound($exception, 'Категория не найдена.');
+        } catch (PersistenceException $exception) {
+            $this->throwPersistenceError($exception, 'Не удалось получить категорию.');
+        }
     }
 
     private function renderForm(string $title, CategoryForm $model): string

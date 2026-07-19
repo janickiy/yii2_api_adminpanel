@@ -39,6 +39,18 @@ final class NotesApiTest extends TestCase
 
     public function testCompleteJwtNotesLifecycleAndOwnership(): void
     {
+        [$status, $body] = $this->request('POST', '/api/v1');
+        self::assertSame(405, $status);
+        self::assertSame(405, $body['error']['status'] ?? null);
+
+        [$status, $body] = $this->request('GET', '/api/v1/login');
+        self::assertSame(405, $status);
+        self::assertSame(405, $body['error']['status'] ?? null);
+
+        [$status, $body] = $this->request('POST', '/api/v1/categories');
+        self::assertSame(405, $status);
+        self::assertSame(405, $body['error']['status'] ?? null);
+
         [$status] = $this->request('GET', '/api/v1/notes');
         self::assertSame(401, $status);
 
@@ -131,13 +143,21 @@ final class NotesApiTest extends TestCase
         self::assertSame(200, $status, json_encode($body));
         self::assertSame('Обновлённая заметка', $body['data']['title'] ?? null);
 
+        [$status, $body] = $this->request('PATCH', "/api/v1/notes/{$noteId}", [
+            'category_id' => $categoryId,
+            'title' => 'Заметка после PATCH',
+            'content' => 'PATCH использует тот же сервисный сценарий.',
+        ], $firstToken);
+        self::assertSame(200, $status, json_encode($body));
+        self::assertSame('Заметка после PATCH', $body['data']['title'] ?? null);
+
         [$status, $body] = $this->request(
             'GET',
             "/api/v1/notes?category_id={$categoryId}&page=1&per_page=10",
             token: $firstToken,
         );
         self::assertSame(200, $status, json_encode($body));
-        self::assertSame('Обновлённая заметка', $body['data'][0]['title'] ?? null);
+        self::assertSame('Заметка после PATCH', $body['data'][0]['title'] ?? null);
 
         $second = [
             'name' => 'Second User',

@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace tests\Unit;
 
-use application\dto\note\NoteQueryDto;
-use frontend\modules\api\http\input\NoteQueryInput;
-use InvalidArgumentException;
+use common\dtos\NoteQueryDto;
+use frontend\forms\api\NoteQueryInput;
 use PHPUnit\Framework\TestCase;
 
 final class NoteQueryDtoTest extends TestCase
 {
-    public function testRejectsPageThatCouldProduceAnUnsafeOffset(): void
+    public function testInputRejectsPageThatCouldProduceAnUnsafeOffset(): void
     {
         $query = new NoteQueryInput([
             'page' => (string) PHP_INT_MAX,
@@ -22,7 +21,20 @@ final class NoteQueryDtoTest extends TestCase
         self::assertArrayHasKey('page', $query->getErrors());
     }
 
-    public function testMapsValidatedTransportNamesToApplicationDto(): void
+    public function testInputRejectsInvalidCategoryAndPageSize(): void
+    {
+        $query = new NoteQueryInput([
+            'category_id' => 0,
+            'page' => 1,
+            'per_page' => 101,
+        ]);
+
+        self::assertFalse($query->validate());
+        self::assertArrayHasKey('category_id', $query->getErrors());
+        self::assertArrayHasKey('per_page', $query->getErrors());
+    }
+
+    public function testMapsValidatedTransportNamesToDto(): void
     {
         $query = new NoteQueryInput([
             'category_id' => ' 7 ',
@@ -33,28 +45,18 @@ final class NoteQueryDtoTest extends TestCase
         self::assertTrue($query->validate());
 
         $dto = $query->toDto();
+        self::assertInstanceOf(NoteQueryDto::class, $dto);
         self::assertSame(7, $dto->categoryId);
         self::assertSame(3, $dto->page);
         self::assertSame(40, $dto->perPage);
     }
 
-    public function testApplicationDtoRejectsUnsafePaginationFromAnyAdapter(): void
+    public function testDtoOnlyCarriesAlreadyValidatedValues(): void
     {
-        foreach (
-            [
-                [null, 0, 20],
-                [null, NoteQueryDto::MAX_PAGE + 1, 20],
-                [null, 1, 0],
-                [null, 1, NoteQueryDto::MAX_PER_PAGE + 1],
-                [0, 1, 20],
-            ] as [$categoryId, $page, $perPage]
-        ) {
-            try {
-                new NoteQueryDto($categoryId, $page, $perPage);
-                self::fail('Invalid pagination must not cross the application boundary.');
-            } catch (InvalidArgumentException) {
-                $this->addToAssertionCount(1);
-            }
-        }
+        $dto = new NoteQueryDto(categoryId: 5, page: 2, perPage: 25);
+
+        self::assertSame(5, $dto->categoryId);
+        self::assertSame(2, $dto->page);
+        self::assertSame(25, $dto->perPage);
     }
 }

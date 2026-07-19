@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace backend\forms;
 
-use common\models\Admin;
+use common\dtos\AdminWriteDto;
+use common\entities\Admin;
 
 final class AdminForm extends BackofficeForm
 {
@@ -30,15 +31,15 @@ final class AdminForm extends BackofficeForm
     {
         return [
             [['login', 'name'], 'required'],
+            [['login', 'name'], 'trim'],
             ['login', 'string', 'min' => 3, 'max' => 120],
             ['name', 'string', 'min' => 3, 'max' => 160],
             ['id', 'integer'],
-            ['role', 'required', 'on' => self::SCENARIO_CREATE],
-            ['role', 'in', 'range' => array_keys(Admin::roleLabels())],
+            ['role', 'required'],
+            ['role', 'in', 'range' => array_keys(self::roleLabels())],
             ['password', 'required', 'on' => self::SCENARIO_CREATE],
             [['password', 'password_again'], 'string', 'min' => 8],
             ['password_again', 'compare', 'compareAttribute' => 'password'],
-            ['login', 'validateLogin'],
         ];
     }
 
@@ -53,21 +54,13 @@ final class AdminForm extends BackofficeForm
         ];
     }
 
-    public function validateLogin(string $attribute): void
+    /** @return array<string, string> */
+    public static function roleLabels(): array
     {
-        if ($this->hasErrors($attribute)) {
-            return;
-        }
-
-        $query = Admin::find()->where(['login' => $this->login]);
-
-        if ($this->id !== null) {
-            $query->andWhere(['<>', 'id', $this->id]);
-        }
-
-        if ($query->exists()) {
-            $this->addError($attribute, 'Этот логин уже занят.');
-        }
+        return [
+            Admin::ROLE_ADMIN => 'Администратор',
+            Admin::ROLE_MODERATOR => 'Модератор',
+        ];
     }
 
     public function loadFromAdmin(Admin $admin): void
@@ -76,5 +69,15 @@ final class AdminForm extends BackofficeForm
         $this->login = $admin->login;
         $this->name = $admin->name;
         $this->role = $admin->role;
+    }
+
+    public function toDto(): AdminWriteDto
+    {
+        return new AdminWriteDto(
+            name: (string) $this->name,
+            login: (string) $this->login,
+            role: (string) $this->role,
+            password: $this->password === null || $this->password === '' ? null : $this->password,
+        );
     }
 }

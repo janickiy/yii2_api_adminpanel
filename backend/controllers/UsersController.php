@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace backend\controllers;
 
 use backend\forms\UserForm;
-use backend\services\UserManagementService;
-use common\models\Admin;
-use infrastructure\persistence\records\UserRecord;
+use common\entities\Admin;
+use common\entities\User;
+use common\repositories\PersistenceException;
+use common\services\AdminService;
+use common\services\exceptions\ConflictException;
+use common\services\exceptions\NotFoundException;
+use common\services\UserService;
 use Yii;
 use yii\base\Module;
-use yii\data\ActiveDataProvider;
 use yii\web\Response;
 
 final class UsersController extends BaseWebController
@@ -20,20 +23,18 @@ final class UsersController extends BaseWebController
     public function __construct(
         string $id,
         Module $module,
-        private readonly UserManagementService $users,
+        private readonly UserService $users,
+        AdminService $access,
         array $config = [],
     ) {
-        parent::__construct($id, $module, $config);
+        parent::__construct($id, $module, $access, $config);
     }
 
     public function actionIndex(): string
     {
         return $this->render('index', [
             'title' => 'Пользователи',
-            'dataProvider' => new ActiveDataProvider([
-                'query' => UserRecord::find()->orderBy(['id' => SORT_DESC]),
-                'pagination' => ['pageSize' => 20],
-            ]),
+            'dataProvider' => $this->dataProvider($this->users->query()),
         ]);
     }
 
@@ -50,8 +51,18 @@ final class UsersController extends BaseWebController
         $form = new UserForm(['scenario' => UserForm::SCENARIO_CREATE]);
         $form->load(Yii::$app->request->post());
 
-        if (!$form->validate() || !$this->users->create($form)) {
+        if (!$form->validate()) {
             return $this->renderForm('Добавить пользователя', $form);
+        }
+
+        try {
+            $this->users->create($form->toDto());
+        } catch (ConflictException) {
+            $form->addError('email', 'Пользователь с таким email уже существует.');
+
+            return $this->renderForm('Добавить пользователя', $form);
+        } catch (PersistenceException $exception) {
+            $this->throwPersistenceError($exception, 'Не удалось создать пользователя.');
         }
 
         Yii::$app->session->setFlash('success', 'Пользователь создан.');
@@ -61,7 +72,7 @@ final class UsersController extends BaseWebController
 
     public function actionEdit(int $id): string
     {
-        $user = $this->findRecord(UserRecord::class, $id, 'Пользователь не найден.');
+        $user = $this->getUser($id);
         $form = new UserForm(['scenario' => UserForm::SCENARIO_UPDATE]);
         $form->loadFromUser($user);
 
@@ -70,17 +81,23 @@ final class UsersController extends BaseWebController
 
     public function actionUpdate(int $id): Response|string
     {
+        $user = $this->getUser($id);
         $form = new UserForm(['scenario' => UserForm::SCENARIO_UPDATE]);
         $form->load(Yii::$app->request->post());
         $form->id = $id;
-        $user = $this->findRecord(
-            UserRecord::class,
-            (int) $form->id,
-            'Пользователь не найден.',
-        );
 
-        if (!$form->validate() || !$this->users->update($user, $form)) {
+        if (!$form->validate()) {
             return $this->renderForm('Редактировать пользователя', $form);
+        }
+
+        try {
+            $this->users->update($user, $form->toDto());
+        } catch (ConflictException) {
+            $form->addError('email', 'Пользователь с таким email уже существует.');
+
+            return $this->renderForm('Редактировать пользователя', $form);
+        } catch (PersistenceException $exception) {
+            $this->throwPersistenceError($exception, 'Не удалось обновить пользователя.');
         }
 
         Yii::$app->session->setFlash('success', 'Пользователь обновлён.');
@@ -90,7 +107,7 @@ final class UsersController extends BaseWebController
 
     public function actionDestroy(int $id): Response|array
     {
-        $user = $this->findRecord(UserRecord::class, $id, 'Пользователь не найден.');
+        $user = $this->getUser($id);
 
         return $this->deleteAndRespond(
             function () use ($user): void {
@@ -99,6 +116,17 @@ final class UsersController extends BaseWebController
             'Пользователь удалён.',
             ['/users/index'],
         );
+    }
+
+    private function getUser(int $id): User
+    {
+        try {
+            return $this->users->get($id);
+        } catch (NotFoundException $exception) {
+            $this->throwNotFound($exception, 'Пользователь не найден.');
+        } catch (PersistenceException $exception) {
+            $this->throwPersistenceError($exception, 'Не удалось получить пользователя.');
+        }
     }
 
     private function renderForm(string $title, UserForm $model): string

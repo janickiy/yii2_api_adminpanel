@@ -7,12 +7,9 @@
 
     <!-- directories to check -->
     <file>backend</file>
-    <file>application</file>
     <file>common</file>
     <file>console</file>
-    <file>domain</file>
     <file>frontend</file>
-    <file>infrastructure</file>
     <file>tests</file>
 
     <exclude-pattern>backend/config/bootstrap.php</exclude-pattern>

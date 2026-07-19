@@ -19,35 +19,41 @@ final class LayerBoundariesTest extends TestCase
         $this->root = dirname(__DIR__, 2);
     }
 
-    public function testDomainDoesNotDependOnOuterLayersOrYii(): void
+    public function testCommonServicesAndRepositoriesDoNotDependOnHttpClasses(): void
     {
-        $this->assertLayerDoesNotReference('domain', [
-            'application\\',
-            'infrastructure\\',
-            'frontend\\',
-            'backend\\',
-            'common\\',
-            'yii\\',
-            'Yii::',
-        ]);
+        $forbidden = [
+            'backend\\forms\\',
+            'backend\\controllers\\',
+            'frontend\\forms\\',
+            'frontend\\controllers\\',
+        ];
+
+        foreach (['common/services', 'common/repositories'] as $directory) {
+            $this->assertFilesDoNotReference($directory, $forbidden);
+        }
     }
 
-    public function testApplicationDependsOnlyOnDomainAndPhp(): void
+    public function testRemovedNamespacesAreAbsentFromProjectPhpSources(): void
     {
-        $this->assertLayerDoesNotReference('application', [
-            'infrastructure\\',
-            'frontend\\',
-            'backend\\',
-            'common\\',
-            'yii\\',
-            'Yii::',
-        ]);
+        $forbidden = [
+            'applica' . 'tion\\',
+            'do' . 'main\\',
+            'infra' . 'structure\\',
+            'common\\' . 'models\\',
+            'backend\\' . 'services\\',
+            'frontend\\' . 'services\\',
+            'frontend\\modules\\' . 'api\\',
+        ];
+
+        foreach (['common', 'backend', 'frontend', 'console', 'tests'] as $directory) {
+            $this->assertFilesDoNotReference($directory, $forbidden);
+        }
     }
 
     /** @param list<string> $forbiddenReferences */
-    private function assertLayerDoesNotReference(string $layer, array $forbiddenReferences): void
+    private function assertFilesDoNotReference(string $directory, array $forbiddenReferences): void
     {
-        foreach ($this->phpFiles($this->root . '/' . $layer) as $path => $source) {
+        foreach ($this->phpFiles($this->root . '/' . $directory) as $path => $source) {
             foreach ($forbiddenReferences as $reference) {
                 self::assertStringNotContainsString(
                     $reference,
@@ -71,10 +77,15 @@ final class LayerBoundariesTest extends TestCase
                 continue;
             }
 
-            $source = file_get_contents($file->getPathname());
+            $path = $file->getPathname();
+            if (str_contains($path, '/runtime/') || str_contains($path, '/web/assets/')) {
+                continue;
+            }
+
+            $source = file_get_contents($path);
             self::assertIsString($source);
 
-            yield $file->getPathname() => $source;
+            yield $path => $source;
         }
     }
 

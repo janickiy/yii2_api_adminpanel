@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace backend\controllers;
 
 use backend\forms\NoteForm;
-use backend\services\NoteManagementService;
-use common\models\Admin;
-use infrastructure\persistence\records\CategoryRecord;
-use infrastructure\persistence\records\NoteRecord;
+use common\entities\Admin;
+use common\entities\Note;
+use common\repositories\PersistenceException;
+use common\services\AdminService;
+use common\services\CategoryService;
+use common\services\exceptions\CategoryNotFoundException;
+use common\services\exceptions\NotFoundException;
+use common\services\NoteService;
 use Yii;
 use yii\base\Module;
-use yii\data\ActiveDataProvider;
 use yii\helpers\ArrayHelper;
 use yii\web\Response;
 
@@ -22,28 +25,25 @@ final class NotesController extends BaseWebController
     public function __construct(
         string $id,
         Module $module,
-        private readonly NoteManagementService $notes,
+        private readonly NoteService $notes,
+        private readonly CategoryService $categories,
+        AdminService $access,
         array $config = [],
     ) {
-        parent::__construct($id, $module, $config);
+        parent::__construct($id, $module, $access, $config);
     }
 
     public function actionIndex(): string
     {
         return $this->render('index', [
             'title' => 'Заметки',
-            'dataProvider' => new ActiveDataProvider([
-                'query' => NoteRecord::find()
-                    ->with(['user', 'category'])
-                    ->orderBy(['id' => SORT_DESC]),
-                'pagination' => ['pageSize' => 20],
-            ]),
+            'dataProvider' => $this->dataProvider($this->notes->query()),
         ]);
     }
 
     public function actionEdit(int $id): string
     {
-        $note = $this->findRecord(NoteRecord::class, $id);
+        $note = $this->getNote($id);
         $form = new NoteForm();
         $form->loadFromNote($note);
 
@@ -52,21 +52,23 @@ final class NotesController extends BaseWebController
 
     public function actionUpdate(int $id): Response|string
     {
+        $note = $this->getNote($id);
         $form = new NoteForm();
         $form->load(Yii::$app->request->post());
         $form->id = $id;
-        $note = $this->findRecord(NoteRecord::class, (int) $form->id);
 
         if (!$form->validate()) {
-            $form->id = (int) $note->id;
-
             return $this->renderForm($form);
         }
 
-        if (!$this->notes->update($note, $form)) {
-            $form->id = (int) $note->id;
+        try {
+            $this->notes->updateRecord($note, $form->toDto());
+        } catch (CategoryNotFoundException) {
+            $form->addError('category_id', 'Категория не найдена.');
 
             return $this->renderForm($form);
+        } catch (PersistenceException $exception) {
+            $this->throwPersistenceError($exception, 'Не удалось обновить заметку.');
         }
 
         Yii::$app->session->setFlash('success', 'Заметка обновлена.');
@@ -76,15 +78,26 @@ final class NotesController extends BaseWebController
 
     public function actionDestroy(int $id): Response|array
     {
-        $note = $this->findRecord(NoteRecord::class, $id);
+        $note = $this->getNote($id);
 
         return $this->deleteAndRespond(
             function () use ($note): void {
-                $this->notes->delete($note);
+                $this->notes->deleteRecord($note);
             },
             'Заметка удалена.',
             ['/notes/index'],
         );
+    }
+
+    private function getNote(int $id): Note
+    {
+        try {
+            return $this->notes->find($id);
+        } catch (NotFoundException $exception) {
+            $this->throwNotFound($exception, 'Заметка не найдена.');
+        } catch (PersistenceException $exception) {
+            $this->throwPersistenceError($exception, 'Не удалось получить заметку.');
+        }
     }
 
     private function renderForm(NoteForm $model): string
@@ -96,12 +109,13 @@ final class NotesController extends BaseWebController
         ]);
     }
 
+    /** @return array<int, string> */
     private function categoryOptions(): array
     {
-        return ArrayHelper::map(
-            CategoryRecord::find()->orderBy(['name' => SORT_ASC])->all(),
-            'id',
-            'name',
-        );
+        try {
+            return ArrayHelper::map($this->categories->list(), 'id', 'name');
+        } catch (PersistenceException $exception) {
+            $this->throwPersistenceError($exception, 'Не удалось получить категории.');
+        }
     }
 }

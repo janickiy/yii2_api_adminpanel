@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace backend\controllers;
 
-use backend\services\MessageManagementService;
-use common\models\Admin;
-use common\models\Message;
-use domain\exceptions\PersistenceException;
+use common\entities\Admin;
+use common\entities\Message;
+use common\repositories\PersistenceException;
+use common\services\AdminService;
+use common\services\exceptions\NotFoundException;
+use common\services\MessageService;
 use InvalidArgumentException;
 use Yii;
 use yii\base\Module;
-use yii\data\ActiveDataProvider;
 use yii\filters\VerbFilter;
 use yii\web\BadRequestHttpException;
 use yii\web\Response;
@@ -23,10 +24,11 @@ final class MessagesController extends BaseWebController
     public function __construct(
         string $id,
         Module $module,
-        private readonly MessageManagementService $messages,
+        private readonly MessageService $messages,
+        AdminService $access,
         array $config = [],
     ) {
-        parent::__construct($id, $module, $config);
+        parent::__construct($id, $module, $access, $config);
     }
 
     public function behaviors(): array
@@ -47,22 +49,13 @@ final class MessagesController extends BaseWebController
     {
         return $this->render('index', [
             'title' => 'Сообщения',
-            'dataProvider' => new ActiveDataProvider([
-                'query' => Message::find()->orderBy(['created_at' => SORT_DESC]),
-                'pagination' => ['pageSize' => 20],
-            ]),
+            'dataProvider' => $this->dataProvider($this->messages->query()),
         ]);
     }
 
     public function actionView(int $id): string
     {
-        $message = $this->findRecord(Message::class, $id, 'Сообщение не найдено.');
-
-        try {
-            $this->messages->markAsRead($message);
-        } catch (PersistenceException $exception) {
-            $this->throwPersistenceError($exception, 'Не удалось изменить статус сообщения.');
-        }
+        $message = $this->getMessage($id);
 
         return $this->render('view', [
             'title' => 'Сообщение #' . $message->id,
@@ -72,7 +65,7 @@ final class MessagesController extends BaseWebController
 
     public function actionStatus(int $id): Response
     {
-        $message = $this->findRecord(Message::class, $id, 'Сообщение не найдено.');
+        $message = $this->getMessage($id);
         $status = (string) Yii::$app->request->post(
             'status',
             Yii::$app->request->get('status', ''),
@@ -93,7 +86,7 @@ final class MessagesController extends BaseWebController
 
     public function actionDestroy(int $id): Response|array
     {
-        $message = $this->findRecord(Message::class, $id, 'Сообщение не найдено.');
+        $message = $this->getMessage($id);
 
         return $this->deleteAndRespond(
             function () use ($message): void {
@@ -102,5 +95,16 @@ final class MessagesController extends BaseWebController
             'Сообщение удалено.',
             ['/messages/index'],
         );
+    }
+
+    private function getMessage(int $id): Message
+    {
+        try {
+            return $this->messages->get($id);
+        } catch (NotFoundException $exception) {
+            $this->throwNotFound($exception, 'Сообщение не найдено.');
+        } catch (PersistenceException $exception) {
+            $this->throwPersistenceError($exception, 'Не удалось получить сообщение.');
+        }
     }
 }

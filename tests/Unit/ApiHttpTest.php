@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace tests\Unit;
 
-use application\dto\auth\LoginUserDto;
-use application\dto\auth\RegisterUserDto;
-use application\dto\note\NoteQueryDto;
-use application\dto\note\NoteWriteDto;
-use frontend\modules\api\http\input\NoteWriteInput;
-use frontend\modules\api\http\input\RegisterInput;
-use frontend\modules\api\http\RequestInputFactory;
-use frontend\modules\api\http\ValidationHttpException;
+use common\dtos\LoginUserDto;
+use common\dtos\NoteQueryDto;
+use common\dtos\NoteWriteDto;
+use common\dtos\RegisterUserDto;
+use frontend\components\api\RequestInputFactory;
+use frontend\components\api\ValidationHttpException;
+use frontend\forms\api\NoteWriteInput;
+use frontend\forms\api\RegisterInput;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
 final class ApiHttpTest extends TestCase
 {
-    public function testApplicationDtosAreReadonlyAndFrameworkIndependent(): void
+    public function testDtosAreSimpleFrameworkIndependentContainers(): void
     {
         foreach (
             [
@@ -28,9 +28,9 @@ final class ApiHttpTest extends TestCase
             ] as $dtoClass
         ) {
             $reflection = new ReflectionClass($dtoClass);
-
-            self::assertTrue($reflection->isReadOnly());
             $file = $reflection->getFileName();
+
+            self::assertTrue($reflection->isFinal());
             self::assertIsString($file);
             self::assertStringNotContainsString('yii\\', (string) file_get_contents($file));
         }

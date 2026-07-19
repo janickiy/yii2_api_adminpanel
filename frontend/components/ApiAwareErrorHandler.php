@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace frontend\components;
 
-use frontend\modules\api\http\ValidationHttpException;
+use frontend\components\api\ValidationHttpException;
 use Yii;
 use yii\web\HttpException;
 use yii\web\Response;
@@ -24,6 +24,7 @@ final class ApiAwareErrorHandler extends \yii\web\ErrorHandler
         $response = Yii::$app->getResponse();
         $response->setStatusCodeByException($exception);
         if ($response->statusCode >= 500) {
+            parent::logException($exception);
             Yii::error([
                 'event' => 'api.exception',
                 'request_id' => $this->requestId(),

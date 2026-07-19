@@ -6,12 +6,12 @@ declare(strict_types=1);
 /** @var string $title */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
-use infrastructure\persistence\records\CategoryRecord;
+use common\entities\Category;
 use yii\helpers\Html;
 
 $this->title = $title;
 $this->params['title'] = $title;
-/** @var CategoryRecord[] $models */
+/** @var Category[] $models */
 $models = $dataProvider->getModels();
 ?>
 <div class="card">

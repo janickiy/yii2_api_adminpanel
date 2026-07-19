@@ -19,10 +19,10 @@
     </php>
     <source>
         <include>
-            <directory suffix=".php">application</directory>
-            <directory suffix=".php">domain</directory>
-            <directory suffix=".php">infrastructure</directory>
-            <directory suffix=".php">frontend/modules/api</directory>
+            <directory suffix=".php">common</directory>
+            <directory suffix=".php">frontend/components/api</directory>
+            <directory suffix=".php">frontend/controllers/api</directory>
+            <directory suffix=".php">frontend/forms/api</directory>
         </include>
     </source>
 </phpunit>
