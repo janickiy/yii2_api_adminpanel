@@ -81,6 +81,21 @@ final class AdvancedStructureTest extends TestCase
         self::assertStringContainsString('bearerAuth:', $spec);
     }
 
+    public function testBackofficeUsesSweetAlertForDeletionConfirmation(): void
+    {
+        $composer = (string) file_get_contents($this->root . '/composer.json');
+        $layout = (string) file_get_contents($this->root . '/backend/views/layouts/admin.php');
+        $confirmation = (string) file_get_contents(
+            $this->root . '/backend/web/js/admin-confirmation.js',
+        );
+
+        self::assertStringContainsString('npm-asset/sweetalert2', $composer);
+        self::assertStringContainsString('AdminAsset::register($this)', $layout);
+        self::assertStringContainsString('yii.confirm =', $confirmation);
+        self::assertStringContainsString('Swal.fire({', $confirmation);
+        self::assertStringNotContainsString('window.confirm(', $layout . $confirmation);
+    }
+
     /** @return iterable<string, string> */
     private function phpFiles(string $directory): iterable
     {

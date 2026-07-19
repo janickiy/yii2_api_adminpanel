@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "71f119cc814aef8ea9e5d4237acbe690",
+    "content-hash": "7fec035fff72567bff343e42fe298670",
     "packages": [
         {
             "name": "bower-asset/inputmask",
@@ -333,6 +333,18 @@
                 }
             ],
             "time": "2025-12-27T19:43:20+00:00"
+        },
+        {
+            "name": "npm-asset/sweetalert2",
+            "version": "11.26.25",
+            "dist": {
+                "type": "tar",
+                "url": "https://registry.npmjs.org/sweetalert2/-/sweetalert2-11.26.25.tgz"
+            },
+            "type": "npm-asset",
+            "license": [
+                "MIT"
+            ]
         },
         {
             "name": "phpoption/phpoption",

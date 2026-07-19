@@ -40,6 +40,10 @@ $config = [
         'session' => [
             'name' => 'advanced-backend',
         ],
+        'assetManager' => [
+            'basePath' => '@backend/web/assets',
+            'baseUrl' => '/admin-assets/assets',
+        ],
         'errorHandler' => [
             'errorAction' => 'site/error',
         ],

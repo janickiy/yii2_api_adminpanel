@@ -5,12 +5,13 @@ declare(strict_types=1);
 /** @var yii\web\View $this */
 /** @var string $content */
 
+use backend\assets\AdminAsset;
 use backend\components\AdminIdentity;
 use common\entities\Admin;
 use yii\helpers\Html;
-use yii\helpers\Json;
 use yii\helpers\Url;
 
+AdminAsset::register($this);
 $this->registerCsrfMetaTags();
 $this->registerMetaTag(['charset' => Yii::$app->charset], 'charset');
 $this->registerMetaTag(['name' => 'viewport', 'content' => 'width=device-width, initial-scale=1']);
@@ -158,42 +159,6 @@ $isActive = static function (array $prefixes) use ($path): string {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0/dist/js/adminlte.min.js"></script>
-<script>
-document.addEventListener('click', function (event) {
-    const link = event.target.closest('a[data-method]');
-    if (!link) {
-        return;
-    }
-
-    event.preventDefault();
-    const confirmation = link.dataset.confirm;
-    if (confirmation && !window.confirm(confirmation)) {
-        return;
-    }
-
-    const form = document.createElement('form');
-    form.method = 'post';
-    form.action = link.href;
-
-    const csrf = document.createElement('input');
-    csrf.type = 'hidden';
-    csrf.name = <?= Json::htmlEncode(Yii::$app->request->csrfParam) ?>;
-    csrf.value = <?= Json::htmlEncode(Yii::$app->request->csrfToken) ?>;
-    form.appendChild(csrf);
-
-    const method = (link.dataset.method || 'post').toUpperCase();
-    if (method !== 'POST') {
-        const override = document.createElement('input');
-        override.type = 'hidden';
-        override.name = '_method';
-        override.value = method;
-        form.appendChild(override);
-    }
-
-    document.body.appendChild(form);
-    form.submit();
-});
-</script>
 <?php $this->endBody() ?>
 </body>
 </html>
