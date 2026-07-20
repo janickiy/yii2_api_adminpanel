@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace frontend\controllers\api;
+namespace frontend\modules\api\controllers;
 
 use yii\filters\ContentNegotiator;
 use yii\rest\Controller;

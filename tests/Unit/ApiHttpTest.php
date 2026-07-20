@@ -8,10 +8,10 @@ use common\dtos\LoginUserDto;
 use common\dtos\NoteQueryDto;
 use common\dtos\NoteWriteDto;
 use common\dtos\RegisterUserDto;
-use frontend\components\api\RequestInputFactory;
-use frontend\components\api\ValidationHttpException;
-use frontend\forms\api\NoteWriteInput;
-use frontend\forms\api\RegisterInput;
+use frontend\modules\api\components\RequestInputFactory;
+use frontend\modules\api\components\ValidationHttpException;
+use frontend\modules\api\forms\NoteWriteInput;
+use frontend\modules\api\forms\RegisterInput;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 

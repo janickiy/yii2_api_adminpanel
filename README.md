@@ -244,17 +244,17 @@ Controller → Form/Input → DTO → Service → Repository → ActiveRecord
 - Метод `toDto()` создаёт DTO только из проверенных значений.
 - Service выполняет бизнес-сценарий, журналирует событие и вызывает нужные репозитории.
 - Repository формирует ActiveRecord-запросы, сохраняет и удаляет сущности; `NoteRepository` также управляет кэшем заметок.
-- Entity содержит имя таблицы, правила хранения, behaviors и relations. Интеграция с Yii2 `IdentityInterface` вынесена в HTTP-адаптеры `frontend/components/api/UserIdentity` и `backend/components/AdminIdentity`.
+- Entity содержит имя таблицы, правила хранения, behaviors и relations. Интеграция с Yii2 `IdentityInterface` вынесена в HTTP-адаптеры `frontend/modules/api/components/UserIdentity` и `backend/components/AdminIdentity`.
 
 Отдельных копий одной модели нет: `common/entities/Category.php`, `Note.php` и `User.php` являются каноническими ActiveRecord-классами. Пользовательские, административные и API-сценарии используют одни и те же repository-интерфейсы. Зависимости сервисов и реализаций репозиториев связывает DI-контейнер Yii2 в `common/config/container.php`.
 
-REST API больше не регистрируется как Yii-модуль. Обычные вложенные контроллеры находятся в `frontend/controllers/api`, входные модели — в `frontend/forms/api`, а форматирование ответов и ошибок — в `frontend/components/api`. Это не меняет публичные URL `/api/v1/*`.
+REST API зарегистрирован как Yii-модуль `frontend/modules/api`. Модуль содержит контроллеры, входные модели, форматирование ответов и ошибок, правила маршрутизации и OpenAPI-контракт. Публичные URL остаются `/api/v1/*`.
 
 Остальные каталоги проекта:
 
 ```text
 backend/           AdminLTE 4: контроллеры, формы и представления админки
-frontend/          публичная форма, REST-контроллеры, API-компоненты и OpenAPI
+frontend/          публичная форма и модуль REST API
 console/           команды и PostgreSQL-миграции
 docker/            Nginx, PHP 8.4, PostgreSQL, Redis и Memcached
 tests/             unit- и HTTP integration-тесты PHPUnit
@@ -315,7 +315,7 @@ docker compose exec -T app composer cs
 docker compose exec -T app composer static
 ```
 
-Swagger UI использует единственный версионируемый источник спецификации — `frontend/openapi/openapi.yaml`, доступный по `/docs`.
+Swagger UI использует единственный версионируемый источник спецификации — `frontend/modules/api/openapi/openapi.yaml`, доступный по `/docs`.
 
 ## Хранение данных Docker
 

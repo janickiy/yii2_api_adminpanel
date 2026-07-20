@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace tests\Unit;
 
+use frontend\modules\api\Module as ApiModule;
 use FilesystemIterator;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
@@ -19,11 +20,16 @@ final class AdvancedStructureTest extends TestCase
         $this->root = dirname(__DIR__, 2);
     }
 
-    public function testCommonApplicationStructureIsCanonical(): void
+    public function testCommonAndApiModuleStructureIsCanonical(): void
     {
         foreach (['dtos', 'entities', 'repositories', 'services'] as $directory) {
             self::assertDirectoryExists($this->root . '/common/' . $directory);
         }
+
+        foreach (['components', 'controllers', 'forms', 'openapi'] as $directory) {
+            self::assertDirectoryExists($this->root . '/frontend/modules/api/' . $directory);
+        }
+        self::assertFileExists($this->root . '/frontend/modules/api/Module.php');
 
         foreach (
             [
@@ -33,7 +39,10 @@ final class AdvancedStructureTest extends TestCase
                 'common/models',
                 'backend/services',
                 'frontend/services',
-                'frontend/modules/api',
+                'frontend/components/api',
+                'frontend/controllers/api',
+                'frontend/forms/api',
+                'frontend/openapi',
             ] as $directory
         ) {
             self::assertDirectoryDoesNotExist($this->root . '/' . $directory);
@@ -55,6 +64,17 @@ final class AdvancedStructureTest extends TestCase
         }
     }
 
+    public function testFrontendRegistersApiModuleWithVersionedRoutes(): void
+    {
+        $config = (string) file_get_contents($this->root . '/frontend/config/main.php');
+        $module = (string) file_get_contents($this->root . '/frontend/modules/api/Module.php');
+
+        self::assertStringContainsString('implements BootstrapInterface', $module);
+        self::assertStringContainsString(ApiModule::class, $config);
+        self::assertSame('api/site/index', ApiModule::URL_RULES['GET api/v1']);
+        self::assertSame('api/note/index', ApiModule::URL_RULES['GET api/v1/notes']);
+    }
+
     public function testDockerUsesPhp84AndPostgreSqlOnly(): void
     {
         $dockerfile = (string) file_get_contents($this->root . '/docker/php/Dockerfile');
@@ -70,7 +90,9 @@ final class AdvancedStructureTest extends TestCase
 
     public function testTrackedOpenApiContractContainsCanonicalResources(): void
     {
-        $spec = (string) file_get_contents($this->root . '/frontend/openapi/openapi.yaml');
+        $spec = (string) file_get_contents(
+            $this->root . '/frontend/modules/api/openapi/openapi.yaml',
+        );
 
         self::assertStringContainsString('/api/v1/register:', $spec);
         self::assertStringContainsString('/api/v1/login:', $spec);

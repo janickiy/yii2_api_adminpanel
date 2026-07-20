@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace frontend\controllers\api;
+namespace frontend\modules\api\controllers;
 
 use common\repositories\PersistenceException;
 use common\services\exceptions\CategoryNotFoundException;
 use common\services\exceptions\NotFoundException;
 use common\services\NoteService;
-use frontend\components\api\ApiExceptionMapper;
-use frontend\components\api\ApiRequestContext;
-use frontend\components\api\ApiResponder;
-use frontend\components\api\RequestInputFactory;
-use frontend\forms\api\NoteQueryInput;
-use frontend\forms\api\NoteWriteInput;
+use frontend\modules\api\components\ApiExceptionMapper;
+use frontend\modules\api\components\ApiRequestContext;
+use frontend\modules\api\components\ApiResponder;
+use frontend\modules\api\components\RequestInputFactory;
+use frontend\modules\api\forms\NoteQueryInput;
+use frontend\modules\api\forms\NoteWriteInput;
 use yii\base\Module;
 
 final class NoteController extends AuthenticatedApiController

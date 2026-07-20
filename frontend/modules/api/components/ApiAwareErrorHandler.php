@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace frontend\components;
+namespace frontend\modules\api\components;
 
-use frontend\components\api\ValidationHttpException;
 use Yii;
 use yii\web\HttpException;
 use yii\web\Response;

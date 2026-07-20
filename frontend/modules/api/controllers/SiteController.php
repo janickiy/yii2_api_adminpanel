@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace frontend\controllers\api;
+namespace frontend\modules\api\controllers;
 
 use Yii;
 use yii\filters\VerbFilter;

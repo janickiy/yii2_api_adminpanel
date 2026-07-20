@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace frontend\components\api;
+namespace frontend\modules\api\components;
 
-use frontend\forms\api\RequestInput;
+use frontend\modules\api\forms\RequestInput;
 use Yii;
 
 final class RequestInputFactory

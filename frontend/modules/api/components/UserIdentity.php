@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace frontend\components\api;
+namespace frontend\modules\api\components;
 
 use common\entities\User;
 use common\repositories\UserRepositoryInterface;

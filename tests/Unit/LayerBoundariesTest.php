@@ -26,6 +26,7 @@ final class LayerBoundariesTest extends TestCase
             'backend\\controllers\\',
             'frontend\\forms\\',
             'frontend\\controllers\\',
+            'frontend\\modules\\api\\',
         ];
 
         foreach (['common/services', 'common/repositories'] as $directory) {
@@ -42,7 +43,6 @@ final class LayerBoundariesTest extends TestCase
             'common\\' . 'models\\',
             'backend\\' . 'services\\',
             'frontend\\' . 'services\\',
-            'frontend\\modules\\' . 'api\\',
         ];
 
         foreach (['common', 'backend', 'frontend', 'console', 'tests'] as $directory) {

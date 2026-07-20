@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace frontend\controllers\api;
+namespace frontend\modules\api\controllers;
 
 use Yii;
 use yii\web\Controller;
@@ -58,7 +58,7 @@ HTML;
 
     public function actionSpec(): Response
     {
-        $specFile = Yii::getAlias('@frontend/openapi/openapi.yaml');
+        $specFile = Yii::getAlias('@frontend/modules/api/openapi/openapi.yaml');
 
         Yii::$app->response->format = Response::FORMAT_RAW;
         Yii::$app->response->headers->set('Content-Type', 'application/yaml; charset=UTF-8');

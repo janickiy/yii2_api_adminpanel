@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace frontend\controllers\api;
+namespace frontend\modules\api\controllers;
 
 use common\filters\PublicRateLimitFilter;
 use common\repositories\PersistenceException;
 use common\services\AuthService;
 use common\services\exceptions\AuthenticationException;
 use common\services\exceptions\ConflictException;
-use frontend\components\api\ApiExceptionMapper;
-use frontend\components\api\ApiRequestContext;
-use frontend\components\api\ApiResponder;
-use frontend\components\api\RequestInputFactory;
-use frontend\forms\api\LoginInput;
-use frontend\forms\api\RegisterInput;
+use frontend\modules\api\components\ApiExceptionMapper;
+use frontend\modules\api\components\ApiRequestContext;
+use frontend\modules\api\components\ApiResponder;
+use frontend\modules\api\components\RequestInputFactory;
+use frontend\modules\api\forms\LoginInput;
+use frontend\modules\api\forms\RegisterInput;
 use Yii;
 use yii\base\Module;
 use yii\filters\auth\HttpBearerAuth;

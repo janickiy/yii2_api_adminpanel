@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace frontend\components\api;
+namespace frontend\modules\api\components;
 
 use common\dtos\AuthenticationResultDto;
 use common\dtos\NotePageDto;

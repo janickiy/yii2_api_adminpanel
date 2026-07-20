@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace frontend\controllers\api;
+namespace frontend\modules\api\controllers;
 
 use common\services\CategoryService;
-use frontend\components\api\ApiResponder;
+use frontend\modules\api\components\ApiResponder;
 use yii\base\Module;
 
 final class CategoryController extends AuthenticatedApiController

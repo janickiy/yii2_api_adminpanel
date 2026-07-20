@@ -18,7 +18,12 @@ $config = [
     'id' => 'yii2-api-adminpanel-frontend',
     'basePath' => dirname(__DIR__),
     'controllerNamespace' => 'frontend\controllers',
-    'bootstrap' => ['log'],
+    'bootstrap' => ['log', 'api'],
+    'modules' => [
+        'api' => [
+            'class' => \frontend\modules\api\Module::class,
+        ],
+    ],
     'components' => [
         'request' => [
             'csrfParam' => '_csrf-frontend',
@@ -30,13 +35,13 @@ $config = [
         ],
         'apiUser' => [
             'class' => \yii\web\User::class,
-            'identityClass' => \frontend\components\api\UserIdentity::class,
+            'identityClass' => \frontend\modules\api\components\UserIdentity::class,
             'enableAutoLogin' => false,
             'enableSession' => false,
             'loginUrl' => null,
         ],
         'user' => [
-            'identityClass' => \frontend\components\api\UserIdentity::class,
+            'identityClass' => \frontend\modules\api\components\UserIdentity::class,
             'enableAutoLogin' => false,
             'loginUrl' => null,
         ],
@@ -44,7 +49,7 @@ $config = [
             'name' => 'advanced-frontend',
         ],
         'errorHandler' => [
-            'class' => \frontend\components\ApiAwareErrorHandler::class,
+            'class' => \frontend\modules\api\components\ApiAwareErrorHandler::class,
             'errorAction' => 'site/error',
         ],
         'log' => [
@@ -73,29 +78,6 @@ $config = [
             ],
             'rules' => [
                 'GET,POST /' => 'site/index',
-                'GET api/documentation' => 'api/documentation/index',
-                'GET docs' => 'api/documentation/spec',
-
-                'GET api/v1' => 'api/site/index',
-                'POST api/v1/register' => 'api/auth/register',
-                'POST api/v1/login' => 'api/auth/login',
-                'POST api/v1/logout' => 'api/auth/logout',
-
-                'GET api/v1/notes' => 'api/note/index',
-                'POST api/v1/notes' => 'api/note/create',
-                'GET api/v1/notes/<id:\d+>' => 'api/note/show',
-                'PUT,PATCH api/v1/notes/<id:\d+>' => 'api/note/update',
-                'DELETE api/v1/notes/<id:\d+>' => 'api/note/delete',
-                'GET api/v1/categories' => 'api/category/index',
-
-                // Route unsupported verbs to the same controllers so VerbFilter returns 405.
-                'api/v1' => 'api/site/index',
-                'api/v1/register' => 'api/auth/register',
-                'api/v1/login' => 'api/auth/login',
-                'api/v1/logout' => 'api/auth/logout',
-                'api/v1/notes' => 'api/note/index',
-                'api/v1/notes/<id:\d+>' => 'api/note/show',
-                'api/v1/categories' => 'api/category/index',
             ],
         ],
     ],

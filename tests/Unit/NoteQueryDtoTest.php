@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace tests\Unit;
 
 use common\dtos\NoteQueryDto;
-use frontend\forms\api\NoteQueryInput;
+use frontend\modules\api\forms\NoteQueryInput;
 use PHPUnit\Framework\TestCase;
 
 final class NoteQueryDtoTest extends TestCase

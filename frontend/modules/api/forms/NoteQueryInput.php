@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace frontend\forms\api;
+namespace frontend\modules\api\forms;
 
 use common\dtos\NoteQueryDto;
 

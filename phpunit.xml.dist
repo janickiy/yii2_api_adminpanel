@@ -20,9 +20,7 @@
     <source>
         <include>
             <directory suffix=".php">common</directory>
-            <directory suffix=".php">frontend/components/api</directory>
-            <directory suffix=".php">frontend/controllers/api</directory>
-            <directory suffix=".php">frontend/forms/api</directory>
+            <directory suffix=".php">frontend/modules/api</directory>
         </include>
     </source>
 </phpunit>
